@@ -1,9 +1,9 @@
 # see semver.org for version info
-AC_INIT([libnrm],[0.1.0],[swann@anl.gov])
+AC_INIT([nrm-extra],[0.1.0],[swann@anl.gov])
 
 
 # are we in the right source dir ?
-AC_CONFIG_SRCDIR([src/nrm.h])
+AC_CONFIG_SRCDIR([src/nrm_mpi.h])
 
 # build artefacts in separate dir
 AC_CONFIG_AUX_DIR([m4])
@@ -25,7 +25,7 @@ AC_FC_WRAPPERS
 AM_PROG_AR
 
 # dependencies
-PKG_CHECK_MODULES([LIBZMQ],[libzmq])
+PKG_CHECK_MODULES([LIBNRM],[libnrm])
 
 # check for libtool
 LT_INIT
@@ -36,6 +36,7 @@ AC_SEARCH_LIBS([dlsym], [dl dld], [], [
 AC_CONFIG_HEADERS([src/config.h])
 
 AC_CONFIG_FILES([Makefile
-		 libnrm.pc
-		 libnrmf.pc])
+		 src/Makefile
+		 ctests/Makefile
+		 ftests/Makefile])
 AC_OUTPUT
