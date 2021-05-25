@@ -25,69 +25,77 @@
 #include <ctype.h>
 #include <dlfcn.h>
 #include <mpi.h>
-#include <sched.h>  // sched_getcpu
-#include <stdio.h>  // printf
+#include <sched.h> // sched_getcpu
+#include <stdio.h> // printf
 #include <stdlib.h> // exit, atoi
+#include <time.h>
 
 #include "nrm.h"
+
 #include "nrm_mpi.h"
 
-static unsigned int cpu;
-static int rank;
-static uint64_t computeTime;
-static struct nrm_context ctxt;
-struct timespec now;
+static struct nrm_context *ctxt;
 
-NRM_MPI_DECL(MPI_Allreduce, int, const void *sendbuf, void *recvbuf, int count,
-             MPI_Datatype datatype, MPI_Op op, MPI_Comm comm) {
-  NRM_MPI_RESOLVE(MPI_Allreduce);
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  computeTime = nrm_timediff(&ctxt, now);
-  int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count, datatype,
-                             op, comm);
+NRM_MPI_DECL(MPI_Allreduce,
+             int,
+             const void *sendbuf,
+             void *recvbuf,
+             int count,
+             MPI_Datatype datatype,
+             MPI_Op op,
+             MPI_Comm comm)
+{
+	NRM_MPI_RESOLVE(MPI_Allreduce);
 
-  nrm_send_phase_context(&ctxt, cpu, computeTime);
-  return ret;
+	nrm_send_progress(ctxt, 1);
+	int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
+	                           datatype, op, comm);
+	nrm_send_progress(ctxt, 1);
+	return ret;
 }
 
-NRM_MPI_DECL(MPI_Barrier, int, MPI_Comm comm) {
-  NRM_MPI_RESOLVE(MPI_Barrier);
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  computeTime = nrm_timediff(&ctxt, now);
-  int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
+NRM_MPI_DECL(MPI_Barrier, int, MPI_Comm comm)
+{
+	NRM_MPI_RESOLVE(MPI_Barrier);
 
-  nrm_send_phase_context(&ctxt, cpu, computeTime);
-  return ret;
+	nrm_send_progress(ctxt, 1);
+	int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
+	nrm_send_progress(ctxt, 1);
+	return ret;
 }
 
-NRM_MPI_DECL(MPI_Comm_size, int, MPI_Comm comm, int *size) {
-  NRM_MPI_RESOLVE(MPI_Comm_size);
-  return NRM_MPI_REALNAME(MPI_Comm_size, comm, size);
+NRM_MPI_DECL(MPI_Comm_size, int, MPI_Comm comm, int *size)
+{
+	NRM_MPI_RESOLVE(MPI_Comm_size);
+	return NRM_MPI_REALNAME(MPI_Comm_size, comm, size);
 }
 
-NRM_MPI_DECL(MPI_Comm_rank, int, MPI_Comm comm, int *rank) {
-  NRM_MPI_RESOLVE(MPI_Comm_rank);
-  return NRM_MPI_REALNAME(MPI_Comm_rank, comm, rank);
+NRM_MPI_DECL(MPI_Comm_rank, int, MPI_Comm comm, int *rank)
+{
+	NRM_MPI_RESOLVE(MPI_Comm_rank);
+	return NRM_MPI_REALNAME(MPI_Comm_rank, comm, rank);
 }
 
-NRM_MPI_DECL(MPI_Finalize, int, void) {
-  NRM_MPI_RESOLVE(MPI_Finalize);
-  nrm_fini(&ctxt);
-  return NRM_MPI_REALNAME(MPI_Finalize);
+NRM_MPI_DECL(MPI_Finalize, int, void)
+{
+	NRM_MPI_RESOLVE(MPI_Finalize);
+	nrm_fini(ctxt);
+	nrm_ctxt_delete(ctxt);
+	return NRM_MPI_REALNAME(MPI_Finalize);
 }
 
-NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv) {
+NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
+{
 
-  NRM_MPI_RESOLVE(MPI_Init);
-  int ret = NRM_MPI_REALNAME(MPI_Init, argc, argv);
+	int ret, rank, cpu;
 
-  cpu = sched_getcpu();
-  NRM_MPI_INNER_NAME(MPI_Comm_rank, MPI_COMM_WORLD, &rank);
+	NRM_MPI_RESOLVE(MPI_Init);
+	ret = NRM_MPI_REALNAME(MPI_Init, argc, argv);
+	cpu = sched_getcpu();
 
-  // Initialize context to communicate with Argo Node Resource Manager(NRM)
-  nrm_init(&ctxt, "nrm-pmpi");
-  struct timespec now;
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  ctxt.time = now;
-  return ret;
+	NRM_MPI_INNER_NAME(MPI_Comm_rank, MPI_COMM_WORLD, &rank);
+
+	ctxt = nrm_ctxt_create();
+	nrm_init(ctxt, "nrm-pmpi", rank, cpu);
+	return ret;
 }

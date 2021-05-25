@@ -10,7 +10,7 @@ AC_CONFIG_AUX_DIR([m4])
 AC_CONFIG_MACRO_DIR([m4])
 
 # automake should fail on any error
-AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects 1.12])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign 1.12])
 
 # check for programs
 AC_LANG([C])
@@ -20,12 +20,19 @@ AC_PROG_CC_C99
 AC_PROG_CPP
 AC_TYPE_SIZE_T
 AC_TYPE_INTPTR_T
+
+PKG_CHECK_MODULES([LIBNRM],[libnrm])
+AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
+
+AC_LANG_PUSH([Fortran])
+
 AC_PROG_FC
 AC_FC_WRAPPERS
-AM_PROG_AR
+AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
-# dependencies
-PKG_CHECK_MODULES([LIBNRM],[libnrm])
+AC_LANG_POP()
+
+AM_PROG_AR
 
 # check for libtool
 LT_INIT

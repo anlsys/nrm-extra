@@ -2,7 +2,7 @@
 { pkgs ? import ./. { } }:
 with pkgs;
 mkShell {
-  inputsFrom = [ libnrm ];
+  inputsFrom = [ nrm-extra ] ++ libnrm.buildInputs;
   nativeBuildInputs = [ autoreconfHook pkgconfig ];
   buildInputs = [
     # deps for debug
@@ -11,6 +11,5 @@ mkShell {
     clang-tools
   ];
 
-  CFLAGS =
-    "-std=c99 -pedantic -Wall -Wextra -Werror";
+  CFLAGS = "-Wall -Wextra";
 }
