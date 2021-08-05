@@ -1,7 +1,7 @@
 # development shell, includes aml dependencies and dev-related helpers
 { pkgs ? import ./. { } }:
 with pkgs;
-mkShell {
+mkShell.override { stdenv = pkgs.stdenv; } {
   inputsFrom = [ nrm-extra ] ++ libnrm.buildInputs;
   nativeBuildInputs = [ autoreconfHook pkgconfig ];
   buildInputs = [
