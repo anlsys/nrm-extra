@@ -11,5 +11,5 @@ libnrm_pmpi_la_LDFLAGS = -export-symbols-regex '^(MPI|mpi)_' @MPILIBS@ @LIBNRM_L
 
 libnrm_ompt_la_SOURCES = omp/entrypoint.c
 
-libnrm_ompt_la_CFLAGS = $(OPENMP_CFLAGS)
-libnrm_ompt_la_LDFLAGS = $(OPENMP_CFLAGS) 
+libnrm_ompt_la_CFLAGS = $(OPENMP_CFLAGS) @LIBNRM_CFLAGS@
+libnrm_ompt_la_LDFLAGS = $(OPENMP_CFLAGS) @LIBNRM_LIBS@

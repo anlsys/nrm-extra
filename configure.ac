@@ -49,5 +49,7 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 ctests/Makefile
+		 ctests/mpi/Makefile
+		 ctests/omp/Makefile
 		 ftests/Makefile])
 AC_OUTPUT
