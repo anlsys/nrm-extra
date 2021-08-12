@@ -1,12 +1,12 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "nrm-omp.h"
+#include "nrm_omp.h"
 
 static ompt_start_tool_result_t nrm_ompt_start;
-static ompt_set_callback_t nrm_ompt_set_callback;
+ompt_set_callback_t nrm_ompt_set_callback;
 
-static struct nrm_context *ctxt;
+struct nrm_context *ctxt;
 
 int nrm_ompt_initialize(ompt_function_lookup_t lookup,
                         int initial_device_num,
@@ -29,7 +29,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	nrm_ompt_set_callback = lookup("ompt_set_callback");
 	assert(nrm_ompt_set_callback != NULL);
 
-	nrm_register_callbacks();
+	nrm_ompt_register_cbs();
 
 	/* spec dictates that we return non-zero to keep the tool active */
 	return 1;

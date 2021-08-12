@@ -18,9 +18,10 @@
 extern "C" {
 #endif
 
-extern nrm_context *ctxt;
+extern struct nrm_context *ctxt;
+extern ompt_set_callback_t nrm_ompt_set_callback;
 
-void nrm_ompt_register_cbs;
+void nrm_ompt_register_cbs(void);
 
 #ifdef __cplusplus
 }

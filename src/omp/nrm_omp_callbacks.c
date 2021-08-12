@@ -1,5 +1,6 @@
 /* generated. See extra/omp */
-#include "nrm-omp.h"
+#include <assert.h>
+#include "nrm_omp.h"
 
 void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type, ompt_data_t *thread_data)
 {
@@ -133,6 +134,7 @@ int nrm_ompt_callback_control_tool_cb(uint64_t command, uint64_t modifier, void 
 
 void nrm_ompt_register_cbs(void)
 {
+	ompt_set_result_t ret;
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_thread_begin,
@@ -212,32 +214,26 @@ void nrm_ompt_register_cbs(void)
 	ret = nrm_ompt_set_callback(
 		ompt_callback_device_initialize,
 		(ompt_callback_t)nrm_ompt_callback_device_initialize_cb);
-	assert(ret == ompt_set_always);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_device_finalize,
 		(ompt_callback_t)nrm_ompt_callback_device_finalize_cb);
-	assert(ret == ompt_set_always);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_device_load,
 		(ompt_callback_t)nrm_ompt_callback_device_load_cb);
-	assert(ret == ompt_set_always);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_device_unload,
 		(ompt_callback_t)nrm_ompt_callback_device_unload_cb);
-	assert(ret == ompt_set_always);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_target_data_op,
 		(ompt_callback_t)nrm_ompt_callback_target_data_op_cb);
-	assert(ret == ompt_set_always);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_target,
 		(ompt_callback_t)nrm_ompt_callback_target_cb);
-	assert(ret == ompt_set_always);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_target_map,
@@ -246,7 +242,6 @@ void nrm_ompt_register_cbs(void)
 	ret = nrm_ompt_set_callback(
 		ompt_callback_target_submit,
 		(ompt_callback_t)nrm_ompt_callback_target_submit_cb);
-	assert(ret == ompt_set_always);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_control_tool,
