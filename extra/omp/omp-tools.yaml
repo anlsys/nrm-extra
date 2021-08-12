@@ -1,0 +1,3022 @@
+---
+typedefs:
+- name: kmp_mutex_impl_t
+  type:
+    kind: enum
+    name: kmp_mutex_impl_t
+- name: ompt_callbacks_t
+  type:
+    kind: enum
+    name: ompt_callbacks_t
+- name: ompt_record_t
+  type:
+    kind: enum
+    name: ompt_record_t
+- name: ompt_record_native_t
+  type:
+    kind: enum
+    name: ompt_record_native_t
+- name: ompt_set_result_t
+  type:
+    kind: enum
+    name: ompt_set_result_t
+- name: ompt_id_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompt_device_time_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompt_buffer_cursor_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompt_thread_t
+  type:
+    kind: enum
+    name: ompt_thread_t
+- name: ompt_scope_endpoint_t
+  type:
+    kind: enum
+    name: ompt_scope_endpoint_t
+- name: ompt_dispatch_t
+  type:
+    kind: enum
+    name: ompt_dispatch_t
+- name: ompt_sync_region_t
+  type:
+    kind: enum
+    name: ompt_sync_region_t
+- name: ompt_target_data_op_t
+  type:
+    kind: enum
+    name: ompt_target_data_op_t
+- name: ompt_work_t
+  type:
+    kind: enum
+    name: ompt_work_t
+- name: ompt_mutex_t
+  type:
+    kind: enum
+    name: ompt_mutex_t
+- name: ompt_native_mon_flag_t
+  type:
+    kind: enum
+    name: ompt_native_mon_flag_t
+- name: ompt_task_flag_t
+  type:
+    kind: enum
+    name: ompt_task_flag_t
+- name: ompt_task_status_t
+  type:
+    kind: enum
+    name: ompt_task_status_t
+- name: ompt_target_t
+  type:
+    kind: enum
+    name: ompt_target_t
+- name: ompt_parallel_flag_t
+  type:
+    kind: enum
+    name: ompt_parallel_flag_t
+- name: ompt_target_map_flag_t
+  type:
+    kind: enum
+    name: ompt_target_map_flag_t
+- name: ompt_dependence_type_t
+  type:
+    kind: enum
+    name: ompt_dependence_type_t
+- name: ompt_cancel_flag_t
+  type:
+    kind: enum
+    name: ompt_cancel_flag_t
+- name: ompt_hwid_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompt_wait_id_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompt_frame_flag_t
+  type:
+    kind: enum
+    name: ompt_frame_flag_t
+- name: ompt_state_t
+  type:
+    kind: enum
+    name: ompt_state_t
+- name: ompt_get_unique_id_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: custom_type
+        name: uint64_t
+      params: []
+- name: ompd_size_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompd_wait_id_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompd_addr_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompd_word_t
+  type:
+    kind: custom_type
+    name: int64_t
+- name: ompd_seg_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompd_device_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompd_thread_id_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompd_scope_t
+  type:
+    kind: enum
+    name: ompd_scope_t
+- name: ompd_icv_id_t
+  type:
+    kind: custom_type
+    name: uint64_t
+- name: ompd_rc_t
+  type:
+    kind: enum
+    name: ompd_rc_t
+- name: ompt_interface_fn_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params: []
+- name: ompt_function_lookup_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: custom_type
+        name: ompt_interface_fn_t
+      params:
+      - name: interface_function_name
+        type:
+          kind: pointer
+          type:
+            kind: char
+            name: char
+            const: true
+- name: ompt_data_t
+  type:
+    kind: union
+    name: ompt_data_t
+- name: ompt_frame_t
+  type:
+    kind: struct
+    name: ompt_frame_t
+- name: ompt_callback_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params: []
+- name: ompt_device_t
+  type:
+    kind: void
+    name: void
+- name: ompt_buffer_t
+  type:
+    kind: void
+    name: void
+- name: ompt_callback_buffer_request_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: device_num
+        type:
+          kind: int
+          name: int
+      - name: buffer
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: custom_type
+              name: ompt_buffer_t
+      - name: bytes
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: size_t
+- name: ompt_callback_buffer_complete_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: device_num
+        type:
+          kind: int
+          name: int
+      - name: buffer
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_buffer_t
+      - name: bytes
+        type:
+          kind: custom_type
+          name: size_t
+      - name: begin
+        type:
+          kind: custom_type
+          name: ompt_buffer_cursor_t
+      - name: buffer_owned
+        type:
+          kind: int
+          name: int
+- name: ompt_finalize_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: tool_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+- name: ompt_initialize_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: lookup
+        type:
+          kind: custom_type
+          name: ompt_function_lookup_t
+      - name: initial_device_num
+        type:
+          kind: int
+          name: int
+      - name: tool_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+- name: ompt_start_tool_result_t
+  type:
+    kind: struct
+    name: ompt_start_tool_result_t
+- name: ompt_record_abstract_t
+  type:
+    kind: struct
+    name: ompt_record_abstract_t
+- name: ompt_dependence_t
+  type:
+    kind: struct
+    name: ompt_dependence_t
+- name: ompt_enumerate_states_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: current_state
+        type:
+          kind: int
+          name: int
+      - name: next_state
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: int
+      - name: next_state_name
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: char
+              name: char
+              const: true
+- name: ompt_enumerate_mutex_impls_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: current_impl
+        type:
+          kind: int
+          name: int
+      - name: next_impl
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: int
+      - name: next_impl_name
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: char
+              name: char
+              const: true
+- name: ompt_set_callback_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: custom_type
+        name: ompt_set_result_t
+      params:
+      - name: event
+        type:
+          kind: custom_type
+          name: ompt_callbacks_t
+      - name: callback
+        type:
+          kind: custom_type
+          name: ompt_callback_t
+- name: ompt_get_callback_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: event
+        type:
+          kind: custom_type
+          name: ompt_callbacks_t
+      - name: callback
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_callback_t
+- name: ompt_get_thread_data_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: pointer
+        type:
+          kind: custom_type
+          name: ompt_data_t
+      params: []
+- name: ompt_get_num_procs_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params: []
+- name: ompt_get_num_places_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params: []
+- name: ompt_get_place_proc_ids_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: place_num
+        type:
+          kind: int
+          name: int
+      - name: ids_size
+        type:
+          kind: int
+          name: int
+      - name: ids
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: int
+- name: ompt_get_place_num_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params: []
+- name: ompt_get_partition_place_nums_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: place_nums_size
+        type:
+          kind: int
+          name: int
+      - name: place_nums
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: int
+- name: ompt_get_proc_id_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params: []
+- name: ompt_get_state_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: wait_id
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_wait_id_t
+- name: ompt_get_parallel_info_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: ancestor_level
+        type:
+          kind: int
+          name: int
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: custom_type
+              name: ompt_data_t
+      - name: team_size
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: int
+- name: ompt_get_task_info_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: ancestor_level
+        type:
+          kind: int
+          name: int
+      - name: flags
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: int
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: custom_type
+              name: ompt_data_t
+      - name: task_frame
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: custom_type
+              name: ompt_frame_t
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: custom_type
+              name: ompt_data_t
+      - name: thread_num
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: int
+- name: ompt_get_task_memory_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: addr
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: void
+              name: void
+      - name: size
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: size_t
+      - name: block
+        type:
+          kind: int
+          name: int
+- name: ompt_get_target_info_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: device_num
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: uint64_t
+      - name: target_id
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_id_t
+      - name: host_op_id
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_id_t
+- name: ompt_get_num_devices_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params: []
+- name: ompt_finalize_tool_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params: []
+- name: ompt_get_device_num_procs_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+- name: ompt_get_device_time_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: custom_type
+        name: ompt_device_time_t
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+- name: ompt_translate_time_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: float
+        name: double
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+      - name: time
+        type:
+          kind: custom_type
+          name: ompt_device_time_t
+- name: ompt_set_trace_ompt_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: custom_type
+        name: ompt_set_result_t
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+      - name: enable
+        type:
+          kind: int
+          name: unsigned int
+      - name: etype
+        type:
+          kind: int
+          name: unsigned int
+- name: ompt_set_trace_native_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: custom_type
+        name: ompt_set_result_t
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+      - name: enable
+        type:
+          kind: int
+          name: int
+      - name: flags
+        type:
+          kind: int
+          name: int
+- name: ompt_start_trace_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+      - name: request
+        type:
+          kind: custom_type
+          name: ompt_callback_buffer_request_t
+      - name: complete
+        type:
+          kind: custom_type
+          name: ompt_callback_buffer_complete_t
+- name: ompt_pause_trace_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+      - name: begin_pause
+        type:
+          kind: int
+          name: int
+- name: ompt_flush_trace_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+- name: ompt_stop_trace_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+- name: ompt_advance_buffer_cursor_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+      - name: buffer
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_buffer_t
+      - name: size
+        type:
+          kind: custom_type
+          name: size_t
+      - name: current
+        type:
+          kind: custom_type
+          name: ompt_buffer_cursor_t
+      - name: next
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_buffer_cursor_t
+- name: ompt_get_record_type_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: custom_type
+        name: ompt_record_t
+      params:
+      - name: buffer
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_buffer_t
+      - name: current
+        type:
+          kind: custom_type
+          name: ompt_buffer_cursor_t
+- name: ompt_get_record_native_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: pointer
+        type:
+          kind: void
+          name: void
+      params:
+      - name: buffer
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_buffer_t
+      - name: current
+        type:
+          kind: custom_type
+          name: ompt_buffer_cursor_t
+      - name: host_op_id
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_id_t
+- name: ompt_get_record_abstract_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: pointer
+        type:
+          kind: custom_type
+          name: ompt_record_abstract_t
+      params:
+      - name: native_record
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+- name: ompt_callback_thread_begin_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: thread_type
+        type:
+          kind: custom_type
+          name: ompt_thread_t
+      - name: thread_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+- name: ompt_record_thread_begin_t
+  type:
+    kind: struct
+    name: ompt_record_thread_begin_t
+- name: ompt_callback_thread_end_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: thread_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+- name: ompt_callback_parallel_begin_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: encountering_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: encountering_task_frame
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_frame_t
+            const: true
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: requested_parallelism
+        type:
+          kind: int
+          name: unsigned int
+      - name: flags
+        type:
+          kind: int
+          name: int
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_parallel_begin_t
+  type:
+    kind: struct
+    name: ompt_record_parallel_begin_t
+- name: ompt_callback_parallel_end_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: encountering_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: flags
+        type:
+          kind: int
+          name: int
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_parallel_end_t
+  type:
+    kind: struct
+    name: ompt_record_parallel_end_t
+- name: ompt_callback_work_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: wstype
+        type:
+          kind: custom_type
+          name: ompt_work_t
+      - name: endpoint
+        type:
+          kind: custom_type
+          name: ompt_scope_endpoint_t
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: count
+        type:
+          kind: custom_type
+          name: uint64_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_work_t
+  type:
+    kind: struct
+    name: ompt_record_work_t
+- name: ompt_callback_dispatch_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: kind
+        type:
+          kind: custom_type
+          name: ompt_dispatch_t
+      - name: instance
+        type:
+          kind: custom_type
+          name: ompt_data_t
+- name: ompt_record_dispatch_t
+  type:
+    kind: struct
+    name: ompt_record_dispatch_t
+- name: ompt_callback_task_create_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: encountering_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: encountering_task_frame
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_frame_t
+            const: true
+      - name: new_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: flags
+        type:
+          kind: int
+          name: int
+      - name: has_dependences
+        type:
+          kind: int
+          name: int
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_task_create_t
+  type:
+    kind: struct
+    name: ompt_record_task_create_t
+- name: ompt_callback_dependences_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: deps
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_dependence_t
+            const: true
+      - name: ndeps
+        type:
+          kind: int
+          name: int
+- name: ompt_record_dependences_t
+  type:
+    kind: struct
+    name: ompt_record_dependences_t
+- name: ompt_callback_task_dependence_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: src_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: sink_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+- name: ompt_record_task_dependence_t
+  type:
+    kind: struct
+    name: ompt_record_task_dependence_t
+- name: ompt_callback_task_schedule_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: prior_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: prior_task_status
+        type:
+          kind: custom_type
+          name: ompt_task_status_t
+      - name: next_task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+- name: ompt_record_task_schedule_t
+  type:
+    kind: struct
+    name: ompt_record_task_schedule_t
+- name: ompt_callback_implicit_task_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: endpoint
+        type:
+          kind: custom_type
+          name: ompt_scope_endpoint_t
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: actual_parallelism
+        type:
+          kind: int
+          name: unsigned int
+      - name: index
+        type:
+          kind: int
+          name: unsigned int
+      - name: flags
+        type:
+          kind: int
+          name: int
+- name: ompt_record_implicit_task_t
+  type:
+    kind: struct
+    name: ompt_record_implicit_task_t
+- name: ompt_callback_master_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: endpoint
+        type:
+          kind: custom_type
+          name: ompt_scope_endpoint_t
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_master_t
+  type:
+    kind: struct
+    name: ompt_record_master_t
+- name: ompt_callback_sync_region_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: kind
+        type:
+          kind: custom_type
+          name: ompt_sync_region_t
+      - name: endpoint
+        type:
+          kind: custom_type
+          name: ompt_scope_endpoint_t
+      - name: parallel_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_sync_region_t
+  type:
+    kind: struct
+    name: ompt_record_sync_region_t
+- name: ompt_callback_mutex_acquire_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: kind
+        type:
+          kind: custom_type
+          name: ompt_mutex_t
+      - name: hint
+        type:
+          kind: int
+          name: unsigned int
+      - name: impl
+        type:
+          kind: int
+          name: unsigned int
+      - name: wait_id
+        type:
+          kind: custom_type
+          name: ompt_wait_id_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_mutex_acquire_t
+  type:
+    kind: struct
+    name: ompt_record_mutex_acquire_t
+- name: ompt_callback_mutex_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: kind
+        type:
+          kind: custom_type
+          name: ompt_mutex_t
+      - name: wait_id
+        type:
+          kind: custom_type
+          name: ompt_wait_id_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_mutex_t
+  type:
+    kind: struct
+    name: ompt_record_mutex_t
+- name: ompt_callback_nest_lock_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: endpoint
+        type:
+          kind: custom_type
+          name: ompt_scope_endpoint_t
+      - name: wait_id
+        type:
+          kind: custom_type
+          name: ompt_wait_id_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_nest_lock_t
+  type:
+    kind: struct
+    name: ompt_record_nest_lock_t
+- name: ompt_callback_flush_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: thread_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_flush_t
+  type:
+    kind: struct
+    name: ompt_record_flush_t
+- name: ompt_callback_cancel_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: flags
+        type:
+          kind: int
+          name: int
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_cancel_t
+  type:
+    kind: struct
+    name: ompt_record_cancel_t
+- name: ompt_callback_device_initialize_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: device_num
+        type:
+          kind: int
+          name: int
+      - name: type
+        type:
+          kind: pointer
+          type:
+            kind: char
+            name: char
+            const: true
+      - name: device
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_device_t
+      - name: lookup
+        type:
+          kind: custom_type
+          name: ompt_function_lookup_t
+      - name: documentation
+        type:
+          kind: pointer
+          type:
+            kind: char
+            name: char
+            const: true
+- name: ompt_callback_device_finalize_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: device_num
+        type:
+          kind: int
+          name: int
+- name: ompt_callback_device_load_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: device_num
+        type:
+          kind: int
+          name: int
+      - name: filename
+        type:
+          kind: pointer
+          type:
+            kind: char
+            name: char
+            const: true
+      - name: offset_in_file
+        type:
+          kind: custom_type
+          name: int64_t
+      - name: vma_in_file
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+      - name: bytes
+        type:
+          kind: custom_type
+          name: size_t
+      - name: host_addr
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+      - name: device_addr
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+      - name: module_id
+        type:
+          kind: custom_type
+          name: uint64_t
+- name: ompt_callback_device_unload_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: device_num
+        type:
+          kind: int
+          name: int
+      - name: module_id
+        type:
+          kind: custom_type
+          name: uint64_t
+- name: ompt_callback_target_data_op_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: target_id
+        type:
+          kind: custom_type
+          name: ompt_id_t
+      - name: host_op_id
+        type:
+          kind: custom_type
+          name: ompt_id_t
+      - name: optype
+        type:
+          kind: custom_type
+          name: ompt_target_data_op_t
+      - name: src_addr
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+      - name: src_device_num
+        type:
+          kind: int
+          name: int
+      - name: dest_addr
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+      - name: dest_device_num
+        type:
+          kind: int
+          name: int
+      - name: bytes
+        type:
+          kind: custom_type
+          name: size_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_target_data_op_t
+  type:
+    kind: struct
+    name: ompt_record_target_data_op_t
+- name: ompt_callback_target_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: kind
+        type:
+          kind: custom_type
+          name: ompt_target_t
+      - name: endpoint
+        type:
+          kind: custom_type
+          name: ompt_scope_endpoint_t
+      - name: device_num
+        type:
+          kind: int
+          name: int
+      - name: task_data
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_data_t
+      - name: target_id
+        type:
+          kind: custom_type
+          name: ompt_id_t
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_target_t
+  type:
+    kind: struct
+    name: ompt_record_target_t
+- name: ompt_callback_target_map_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: target_id
+        type:
+          kind: custom_type
+          name: ompt_id_t
+      - name: nitems
+        type:
+          kind: int
+          name: unsigned int
+      - name: host_addr
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: void
+              name: void
+      - name: device_addr
+        type:
+          kind: pointer
+          type:
+            kind: pointer
+            type:
+              kind: void
+              name: void
+      - name: bytes
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: size_t
+      - name: mapping_flags
+        type:
+          kind: pointer
+          type:
+            kind: int
+            name: unsigned int
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_target_map_t
+  type:
+    kind: struct
+    name: ompt_record_target_map_t
+- name: ompt_callback_target_submit_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: void
+        name: void
+      params:
+      - name: target_id
+        type:
+          kind: custom_type
+          name: ompt_id_t
+      - name: host_op_id
+        type:
+          kind: custom_type
+          name: ompt_id_t
+      - name: requested_num_teams
+        type:
+          kind: int
+          name: unsigned int
+- name: ompt_record_target_kernel_t
+  type:
+    kind: struct
+    name: ompt_record_target_kernel_t
+- name: ompt_callback_control_tool_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: int
+        name: int
+      params:
+      - name: command
+        type:
+          kind: custom_type
+          name: uint64_t
+      - name: modifier
+        type:
+          kind: custom_type
+          name: uint64_t
+      - name: arg
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+      - name: codeptr_ra
+        type:
+          kind: pointer
+          type:
+            kind: void
+            name: void
+            const: true
+- name: ompt_record_control_tool_t
+  type:
+    kind: struct
+    name: ompt_record_control_tool_t
+- name: ompd_address_t
+  type:
+    kind: struct
+    name: ompd_address_t
+- name: ompd_frame_info_t
+  type:
+    kind: struct
+    name: ompd_frame_info_t
+- name: ompd_address_space_handle_t
+  type:
+    kind: struct
+    name: _ompd_aspace_handle
+- name: ompd_thread_handle_t
+  type:
+    kind: struct
+    name: _ompd_thread_handle
+- name: ompd_parallel_handle_t
+  type:
+    kind: struct
+    name: _ompd_parallel_handle
+- name: ompd_task_handle_t
+  type:
+    kind: struct
+    name: _ompd_task_handle
+- name: ompd_address_space_context_t
+  type:
+    kind: struct
+    name: _ompd_aspace_cont
+- name: ompd_thread_context_t
+  type:
+    kind: struct
+    name: _ompd_thread_cont
+- name: ompd_device_type_sizes_t
+  type:
+    kind: struct
+    name: ompd_device_type_sizes_t
+- name: ompt_record_ompt_t
+  type:
+    kind: struct
+    name: ompt_record_ompt_t
+- name: ompt_get_record_ompt_t
+  type:
+    kind: pointer
+    type:
+      kind: function
+      type:
+        kind: pointer
+        type:
+          kind: custom_type
+          name: ompt_record_ompt_t
+      params:
+      - name: buffer
+        type:
+          kind: pointer
+          type:
+            kind: custom_type
+            name: ompt_buffer_t
+      - name: current
+        type:
+          kind: custom_type
+          name: ompt_buffer_cursor_t
+enums:
+- name: kmp_mutex_impl_t
+  members:
+  - name: kmp_mutex_impl_none
+    val: '0'
+  - name: kmp_mutex_impl_spin
+    val: '1'
+  - name: kmp_mutex_impl_queuing
+    val: '2'
+  - name: kmp_mutex_impl_speculative
+    val: '3'
+- name: ompt_callbacks_t
+  members:
+  - name: ompt_callback_thread_begin
+    val: '1'
+  - name: ompt_callback_thread_end
+    val: '2'
+  - name: ompt_callback_parallel_begin
+    val: '3'
+  - name: ompt_callback_parallel_end
+    val: '4'
+  - name: ompt_callback_task_create
+    val: '5'
+  - name: ompt_callback_task_schedule
+    val: '6'
+  - name: ompt_callback_implicit_task
+    val: '7'
+  - name: ompt_callback_target
+    val: '8'
+  - name: ompt_callback_target_data_op
+    val: '9'
+  - name: ompt_callback_target_submit
+    val: '10'
+  - name: ompt_callback_control_tool
+    val: '11'
+  - name: ompt_callback_device_initialize
+    val: '12'
+  - name: ompt_callback_device_finalize
+    val: '13'
+  - name: ompt_callback_device_load
+    val: '14'
+  - name: ompt_callback_device_unload
+    val: '15'
+  - name: ompt_callback_sync_region_wait
+    val: '16'
+  - name: ompt_callback_mutex_released
+    val: '17'
+  - name: ompt_callback_dependences
+    val: '18'
+  - name: ompt_callback_task_dependence
+    val: '19'
+  - name: ompt_callback_work
+    val: '20'
+  - name: ompt_callback_master
+    val: '21'
+  - name: ompt_callback_target_map
+    val: '22'
+  - name: ompt_callback_sync_region
+    val: '23'
+  - name: ompt_callback_lock_init
+    val: '24'
+  - name: ompt_callback_lock_destroy
+    val: '25'
+  - name: ompt_callback_mutex_acquire
+    val: '26'
+  - name: ompt_callback_mutex_acquired
+    val: '27'
+  - name: ompt_callback_nest_lock
+    val: '28'
+  - name: ompt_callback_flush
+    val: '29'
+  - name: ompt_callback_cancel
+    val: '30'
+  - name: ompt_callback_reduction
+    val: '31'
+  - name: ompt_callback_dispatch
+    val: '32'
+- name: ompt_record_t
+  members:
+  - name: ompt_record_ompt
+    val: '1'
+  - name: ompt_record_native
+    val: '2'
+  - name: ompt_record_invalid
+    val: '3'
+- name: ompt_record_native_t
+  members:
+  - name: ompt_record_native_info
+    val: '1'
+  - name: ompt_record_native_event
+    val: '2'
+- name: ompt_set_result_t
+  members:
+  - name: ompt_set_error
+    val: '0'
+  - name: ompt_set_never
+    val: '1'
+  - name: ompt_set_impossible
+    val: '2'
+  - name: ompt_set_sometimes
+    val: '3'
+  - name: ompt_set_sometimes_paired
+    val: '4'
+  - name: ompt_set_always
+    val: '5'
+- name: ompt_thread_t
+  members:
+  - name: ompt_thread_initial
+    val: '1'
+  - name: ompt_thread_worker
+    val: '2'
+  - name: ompt_thread_other
+    val: '3'
+  - name: ompt_thread_unknown
+    val: '4'
+- name: ompt_scope_endpoint_t
+  members:
+  - name: ompt_scope_begin
+    val: '1'
+  - name: ompt_scope_end
+    val: '2'
+- name: ompt_dispatch_t
+  members:
+  - name: ompt_dispatch_iteration
+    val: '1'
+  - name: ompt_dispatch_section
+    val: '2'
+- name: ompt_sync_region_t
+  members:
+  - name: ompt_sync_region_barrier
+    val: '1'
+  - name: ompt_sync_region_barrier_implicit
+    val: '2'
+  - name: ompt_sync_region_barrier_explicit
+    val: '3'
+  - name: ompt_sync_region_barrier_implementation
+    val: '4'
+  - name: ompt_sync_region_taskwait
+    val: '5'
+  - name: ompt_sync_region_taskgroup
+    val: '6'
+  - name: ompt_sync_region_reduction
+    val: '7'
+- name: ompt_target_data_op_t
+  members:
+  - name: ompt_target_data_alloc
+    val: '1'
+  - name: ompt_target_data_transfer_to_device
+    val: '2'
+  - name: ompt_target_data_transfer_from_device
+    val: '3'
+  - name: ompt_target_data_delete
+    val: '4'
+  - name: ompt_target_data_associate
+    val: '5'
+  - name: ompt_target_data_disassociate
+    val: '6'
+- name: ompt_work_t
+  members:
+  - name: ompt_work_loop
+    val: '1'
+  - name: ompt_work_sections
+    val: '2'
+  - name: ompt_work_single_executor
+    val: '3'
+  - name: ompt_work_single_other
+    val: '4'
+  - name: ompt_work_workshare
+    val: '5'
+  - name: ompt_work_distribute
+    val: '6'
+  - name: ompt_work_taskloop
+    val: '7'
+- name: ompt_mutex_t
+  members:
+  - name: ompt_mutex_lock
+    val: '1'
+  - name: ompt_mutex_test_lock
+    val: '2'
+  - name: ompt_mutex_nest_lock
+    val: '3'
+  - name: ompt_mutex_test_nest_lock
+    val: '4'
+  - name: ompt_mutex_critical
+    val: '5'
+  - name: ompt_mutex_atomic
+    val: '6'
+  - name: ompt_mutex_ordered
+    val: '7'
+- name: ompt_native_mon_flag_t
+  members:
+  - name: ompt_native_data_motion_explicit
+    val: '0x1'
+  - name: ompt_native_data_motion_implicit
+    val: '0x2'
+  - name: ompt_native_kernel_invocation
+    val: '0x4'
+  - name: ompt_native_kernel_execution
+    val: '0x8'
+  - name: ompt_native_driver
+    val: '0x10'
+  - name: ompt_native_runtime
+    val: '0x20'
+  - name: ompt_native_overhead
+    val: '0x40'
+  - name: ompt_native_idleness
+    val: '0x80'
+- name: ompt_task_flag_t
+  members:
+  - name: ompt_task_initial
+    val: '0x1'
+  - name: ompt_task_implicit
+    val: '0x2'
+  - name: ompt_task_explicit
+    val: '0x4'
+  - name: ompt_task_target
+    val: '0x8'
+  - name: ompt_task_undeferred
+    val: '0x8000000'
+  - name: ompt_task_untied
+    val: '0x10000000'
+  - name: ompt_task_final
+    val: '0x20000000'
+  - name: ompt_task_mergeable
+    val: '0x40000000'
+  - name: ompt_task_merged
+    val: '0x80000000'
+- name: ompt_task_status_t
+  members:
+  - name: ompt_task_complete
+    val: '1'
+  - name: ompt_task_yield
+    val: '2'
+  - name: ompt_task_cancel
+    val: '3'
+  - name: ompt_task_detach
+    val: '4'
+  - name: ompt_task_early_fulfill
+    val: '5'
+  - name: ompt_task_late_fulfill
+    val: '6'
+  - name: ompt_task_switch
+    val: '7'
+- name: ompt_target_t
+  members:
+  - name: ompt_target
+    val: '1'
+  - name: ompt_target_enter_data
+    val: '2'
+  - name: ompt_target_exit_data
+    val: '3'
+  - name: ompt_target_update
+    val: '4'
+- name: ompt_parallel_flag_t
+  members:
+  - name: ompt_parallel_invoker_program
+    val: '0x1'
+  - name: ompt_parallel_invoker_runtime
+    val: '0x2'
+  - name: ompt_parallel_league
+    val: '0x40000000'
+  - name: ompt_parallel_team
+    val: '0x80000000'
+- name: ompt_target_map_flag_t
+  members:
+  - name: ompt_target_map_flag_to
+    val: '0x1'
+  - name: ompt_target_map_flag_from
+    val: '0x2'
+  - name: ompt_target_map_flag_alloc
+    val: '0x4'
+  - name: ompt_target_map_flag_release
+    val: '0x8'
+  - name: ompt_target_map_flag_delete
+    val: '0x10'
+  - name: ompt_target_map_flag_implicit
+    val: '0x20'
+- name: ompt_dependence_type_t
+  members:
+  - name: ompt_dependence_type_in
+    val: '1'
+  - name: ompt_dependence_type_out
+    val: '2'
+  - name: ompt_dependence_type_inout
+    val: '3'
+  - name: ompt_dependence_type_mutexinoutset
+    val: '4'
+  - name: ompt_dependence_type_source
+    val: '5'
+  - name: ompt_dependence_type_sink
+    val: '6'
+- name: ompt_cancel_flag_t
+  members:
+  - name: ompt_cancel_parallel
+    val: '0x1'
+  - name: ompt_cancel_sections
+    val: '0x2'
+  - name: ompt_cancel_loop
+    val: '0x4'
+  - name: ompt_cancel_taskgroup
+    val: '0x8'
+  - name: ompt_cancel_activated
+    val: '0x10'
+  - name: ompt_cancel_detected
+    val: '0x20'
+  - name: ompt_cancel_discarded_task
+    val: '0x40'
+- name: ompt_frame_flag_t
+  members:
+  - name: ompt_frame_runtime
+    val: '0x0'
+  - name: ompt_frame_application
+    val: '0x1'
+  - name: ompt_frame_cfa
+    val: '0x10'
+  - name: ompt_frame_framepointer
+    val: '0x20'
+  - name: ompt_frame_stackaddress
+    val: '0x30'
+- name: ompt_state_t
+  members:
+  - name: ompt_state_work_serial
+    val: '0x0'
+  - name: ompt_state_work_parallel
+    val: '0x1'
+  - name: ompt_state_work_reduction
+    val: '0x2'
+  - name: ompt_state_wait_barrier
+    val: '0x10'
+  - name: ompt_state_wait_barrier_implicit_parallel
+    val: '0x11'
+  - name: ompt_state_wait_barrier_implicit_workshare
+    val: '0x12'
+  - name: ompt_state_wait_barrier_implicit
+    val: '0x13'
+  - name: ompt_state_wait_barrier_explicit
+    val: '0x14'
+  - name: ompt_state_wait_taskwait
+    val: '0x20'
+  - name: ompt_state_wait_taskgroup
+    val: '0x21'
+  - name: ompt_state_wait_mutex
+    val: '0x40'
+  - name: ompt_state_wait_lock
+    val: '0x41'
+  - name: ompt_state_wait_critical
+    val: '0x42'
+  - name: ompt_state_wait_atomic
+    val: '0x43'
+  - name: ompt_state_wait_ordered
+    val: '0x44'
+  - name: ompt_state_wait_target
+    val: '0x80'
+  - name: ompt_state_wait_target_map
+    val: '0x81'
+  - name: ompt_state_wait_target_update
+    val: '0x82'
+  - name: ompt_state_idle
+    val: '0x100'
+  - name: ompt_state_overhead
+    val: '0x101'
+  - name: ompt_state_undefined
+    val: '0x102'
+- name: ompd_scope_t
+  members:
+  - name: ompd_scope_global
+    val: '1'
+  - name: ompd_scope_address_space
+    val: '2'
+  - name: ompd_scope_thread
+    val: '3'
+  - name: ompd_scope_parallel
+    val: '4'
+  - name: ompd_scope_implicit_task
+    val: '5'
+  - name: ompd_scope_task
+    val: '6'
+- name: ompd_rc_t
+  members:
+  - name: ompd_rc_ok
+    val: '0'
+  - name: ompd_rc_unavailable
+    val: '1'
+  - name: ompd_rc_stale_handle
+    val: '2'
+  - name: ompd_rc_bad_input
+    val: '3'
+  - name: ompd_rc_error
+    val: '4'
+  - name: ompd_rc_unsupported
+    val: '5'
+  - name: ompd_rc_needs_state_tracking
+    val: '6'
+  - name: ompd_rc_incompatible
+    val: '7'
+  - name: ompd_rc_device_read_error
+    val: '8'
+  - name: ompd_rc_device_write_error
+    val: '9'
+  - name: ompd_rc_nomem
+    val: '10'
+unions:
+- name: ompt_data_t
+  members:
+  - name: value
+    type:
+      kind: custom_type
+      name: uint64_t
+  - name: ptr
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+structs:
+- name: ompt_frame_t
+  members:
+  - name: exit_frame
+    type:
+      kind: custom_type
+      name: ompt_data_t
+  - name: enter_frame
+    type:
+      kind: custom_type
+      name: ompt_data_t
+  - name: exit_frame_flags
+    type:
+      kind: int
+      name: int
+  - name: enter_frame_flags
+    type:
+      kind: int
+      name: int
+- name: ompt_start_tool_result_t
+  members:
+  - name: initialize
+    type:
+      kind: custom_type
+      name: ompt_initialize_t
+  - name: finalize
+    type:
+      kind: custom_type
+      name: ompt_finalize_t
+  - name: tool_data
+    type:
+      kind: custom_type
+      name: ompt_data_t
+- name: ompt_record_abstract_t
+  members:
+  - name: rclass
+    type:
+      kind: custom_type
+      name: ompt_record_native_t
+  - name: type
+    type:
+      kind: pointer
+      type:
+        kind: char
+        name: char
+        const: true
+  - name: start_time
+    type:
+      kind: custom_type
+      name: ompt_device_time_t
+  - name: end_time
+    type:
+      kind: custom_type
+      name: ompt_device_time_t
+  - name: hwid
+    type:
+      kind: custom_type
+      name: ompt_hwid_t
+- name: ompt_dependence_t
+  members:
+  - name: variable
+    type:
+      kind: custom_type
+      name: ompt_data_t
+  - name: dependence_type
+    type:
+      kind: custom_type
+      name: ompt_dependence_type_t
+- name: ompt_record_thread_begin_t
+  members:
+  - name: thread_type
+    type:
+      kind: custom_type
+      name: ompt_thread_t
+- name: ompt_record_parallel_begin_t
+  members:
+  - name: encountering_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: parallel_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: requested_parallelism
+    type:
+      kind: int
+      name: unsigned int
+  - name: flags
+    type:
+      kind: int
+      name: int
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_parallel_end_t
+  members:
+  - name: parallel_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: encountering_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: flags
+    type:
+      kind: int
+      name: int
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_work_t
+  members:
+  - name: wstype
+    type:
+      kind: custom_type
+      name: ompt_work_t
+  - name: endpoint
+    type:
+      kind: custom_type
+      name: ompt_scope_endpoint_t
+  - name: parallel_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: count
+    type:
+      kind: custom_type
+      name: uint64_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_dispatch_t
+  members:
+  - name: parallel_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: kind
+    type:
+      kind: custom_type
+      name: ompt_dispatch_t
+  - name: instance
+    type:
+      kind: custom_type
+      name: ompt_data_t
+- name: ompt_record_task_create_t
+  members:
+  - name: encountering_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: new_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: flags
+    type:
+      kind: int
+      name: int
+  - name: has_dependences
+    type:
+      kind: int
+      name: int
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_dependences_t
+  members:
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: dep
+    type:
+      kind: custom_type
+      name: ompt_dependence_t
+  - name: ndeps
+    type:
+      kind: int
+      name: int
+- name: ompt_record_task_dependence_t
+  members:
+  - name: src_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: sink_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+- name: ompt_record_task_schedule_t
+  members:
+  - name: prior_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: prior_task_status
+    type:
+      kind: custom_type
+      name: ompt_task_status_t
+  - name: next_task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+- name: ompt_record_implicit_task_t
+  members:
+  - name: endpoint
+    type:
+      kind: custom_type
+      name: ompt_scope_endpoint_t
+  - name: parallel_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: actual_parallelism
+    type:
+      kind: int
+      name: unsigned int
+  - name: index
+    type:
+      kind: int
+      name: unsigned int
+  - name: flags
+    type:
+      kind: int
+      name: int
+- name: ompt_record_master_t
+  members:
+  - name: endpoint
+    type:
+      kind: custom_type
+      name: ompt_scope_endpoint_t
+  - name: parallel_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_sync_region_t
+  members:
+  - name: kind
+    type:
+      kind: custom_type
+      name: ompt_sync_region_t
+  - name: endpoint
+    type:
+      kind: custom_type
+      name: ompt_scope_endpoint_t
+  - name: parallel_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_mutex_acquire_t
+  members:
+  - name: kind
+    type:
+      kind: custom_type
+      name: ompt_mutex_t
+  - name: hint
+    type:
+      kind: int
+      name: unsigned int
+  - name: impl
+    type:
+      kind: int
+      name: unsigned int
+  - name: wait_id
+    type:
+      kind: custom_type
+      name: ompt_wait_id_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_mutex_t
+  members:
+  - name: kind
+    type:
+      kind: custom_type
+      name: ompt_mutex_t
+  - name: wait_id
+    type:
+      kind: custom_type
+      name: ompt_wait_id_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_nest_lock_t
+  members:
+  - name: endpoint
+    type:
+      kind: custom_type
+      name: ompt_scope_endpoint_t
+  - name: wait_id
+    type:
+      kind: custom_type
+      name: ompt_wait_id_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_flush_t
+  members:
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_cancel_t
+  members:
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: flags
+    type:
+      kind: int
+      name: int
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_target_data_op_t
+  members:
+  - name: host_op_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: optype
+    type:
+      kind: custom_type
+      name: ompt_target_data_op_t
+  - name: src_addr
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+  - name: src_device_num
+    type:
+      kind: int
+      name: int
+  - name: dest_addr
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+  - name: dest_device_num
+    type:
+      kind: int
+      name: int
+  - name: bytes
+    type:
+      kind: custom_type
+      name: size_t
+  - name: end_time
+    type:
+      kind: custom_type
+      name: ompt_device_time_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_target_t
+  members:
+  - name: kind
+    type:
+      kind: custom_type
+      name: ompt_target_t
+  - name: endpoint
+    type:
+      kind: custom_type
+      name: ompt_scope_endpoint_t
+  - name: device_num
+    type:
+      kind: int
+      name: int
+  - name: task_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: target_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_target_map_t
+  members:
+  - name: target_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: nitems
+    type:
+      kind: int
+      name: unsigned int
+  - name: host_addr
+    type:
+      kind: pointer
+      type:
+        kind: pointer
+        type:
+          kind: void
+          name: void
+  - name: device_addr
+    type:
+      kind: pointer
+      type:
+        kind: pointer
+        type:
+          kind: void
+          name: void
+  - name: bytes
+    type:
+      kind: pointer
+      type:
+        kind: custom_type
+        name: size_t
+  - name: mapping_flags
+    type:
+      kind: pointer
+      type:
+        kind: int
+        name: unsigned int
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompt_record_target_kernel_t
+  members:
+  - name: host_op_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: requested_num_teams
+    type:
+      kind: int
+      name: unsigned int
+  - name: granted_num_teams
+    type:
+      kind: int
+      name: unsigned int
+  - name: end_time
+    type:
+      kind: custom_type
+      name: ompt_device_time_t
+- name: ompt_record_control_tool_t
+  members:
+  - name: command
+    type:
+      kind: custom_type
+      name: uint64_t
+  - name: modifier
+    type:
+      kind: custom_type
+      name: uint64_t
+  - name: codeptr_ra
+    type:
+      kind: pointer
+      type:
+        kind: void
+        name: void
+        const: true
+- name: ompd_address_t
+  members:
+  - name: segment
+    type:
+      kind: custom_type
+      name: ompd_seg_t
+  - name: address
+    type:
+      kind: custom_type
+      name: ompd_addr_t
+- name: ompd_frame_info_t
+  members:
+  - name: frame_address
+    type:
+      kind: custom_type
+      name: ompd_address_t
+  - name: frame_flag
+    type:
+      kind: custom_type
+      name: ompd_word_t
+- name: ompd_device_type_sizes_t
+  members:
+  - name: sizeof_char
+    type:
+      kind: custom_type
+      name: uint8_t
+  - name: sizeof_short
+    type:
+      kind: custom_type
+      name: uint8_t
+  - name: sizeof_int
+    type:
+      kind: custom_type
+      name: uint8_t
+  - name: sizeof_long
+    type:
+      kind: custom_type
+      name: uint8_t
+  - name: sizeof_long_long
+    type:
+      kind: custom_type
+      name: uint8_t
+  - name: sizeof_pointer
+    type:
+      kind: custom_type
+      name: uint8_t
+- name: ompt_record_ompt_t
+  members:
+  - name: type
+    type:
+      kind: custom_type
+      name: ompt_callbacks_t
+  - name: time
+    type:
+      kind: custom_type
+      name: ompt_device_time_t
+  - name: thread_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: target_id
+    type:
+      kind: custom_type
+      name: ompt_id_t
+  - name: record
+    type:
+      kind: union
+      members:
+      - name: thread_begin
+        type:
+          kind: custom_type
+          name: ompt_record_thread_begin_t
+      - name: parallel_begin
+        type:
+          kind: custom_type
+          name: ompt_record_parallel_begin_t
+      - name: parallel_end
+        type:
+          kind: custom_type
+          name: ompt_record_parallel_end_t
+      - name: work
+        type:
+          kind: custom_type
+          name: ompt_record_work_t
+      - name: dispatch
+        type:
+          kind: custom_type
+          name: ompt_record_dispatch_t
+      - name: task_create
+        type:
+          kind: custom_type
+          name: ompt_record_task_create_t
+      - name: dependences
+        type:
+          kind: custom_type
+          name: ompt_record_dependences_t
+      - name: task_dependence
+        type:
+          kind: custom_type
+          name: ompt_record_task_dependence_t
+      - name: task_schedule
+        type:
+          kind: custom_type
+          name: ompt_record_task_schedule_t
+      - name: implicit_task
+        type:
+          kind: custom_type
+          name: ompt_record_implicit_task_t
+      - name: master
+        type:
+          kind: custom_type
+          name: ompt_record_master_t
+      - name: sync_region
+        type:
+          kind: custom_type
+          name: ompt_record_sync_region_t
+      - name: mutex_acquire
+        type:
+          kind: custom_type
+          name: ompt_record_mutex_acquire_t
+      - name: mutex
+        type:
+          kind: custom_type
+          name: ompt_record_mutex_t
+      - name: nest_lock
+        type:
+          kind: custom_type
+          name: ompt_record_nest_lock_t
+      - name: flush
+        type:
+          kind: custom_type
+          name: ompt_record_flush_t
+      - name: cancel
+        type:
+          kind: custom_type
+          name: ompt_record_cancel_t
+      - name: target
+        type:
+          kind: custom_type
+          name: ompt_record_target_t
+      - name: target_data_op
+        type:
+          kind: custom_type
+          name: ompt_record_target_data_op_t
+      - name: target_map
+        type:
+          kind: custom_type
+          name: ompt_record_target_map_t
+      - name: target_kernel
+        type:
+          kind: custom_type
+          name: ompt_record_target_kernel_t
+      - name: control_tool
+        type:
+          kind: custom_type
+          name: ompt_record_control_tool_t
