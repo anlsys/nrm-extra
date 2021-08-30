@@ -57,11 +57,6 @@ void nrm_ompt_callback_implicit_task_cb(ompt_scope_endpoint_t endpoint, ompt_dat
 	nrm_send_progress(ctxt, 1);
 }
 
-void nrm_ompt_callback_master_cb(ompt_scope_endpoint_t endpoint, ompt_data_t *parallel_data, ompt_data_t *task_data, const void *codeptr_ra)
-{
-	nrm_send_progress(ctxt, 1);
-}
-
 void nrm_ompt_callback_sync_region_cb(ompt_sync_region_t kind, ompt_scope_endpoint_t endpoint, ompt_data_t *parallel_data, ompt_data_t *task_data, const void *codeptr_ra)
 {
 	nrm_send_progress(ctxt, 1);
@@ -186,10 +181,6 @@ void nrm_ompt_register_cbs(void)
 		ompt_callback_implicit_task,
 		(ompt_callback_t)nrm_ompt_callback_implicit_task_cb);
 	assert(ret == ompt_set_always);
-
-	ret = nrm_ompt_set_callback(
-		ompt_callback_master,
-		(ompt_callback_t)nrm_ompt_callback_master_cb);
 
 	ret = nrm_ompt_set_callback(
 		ompt_callback_sync_region,
