@@ -1,7 +1,7 @@
-{ stdenv, autoreconfHook, pkgconfig, libnrm, gfortran, mpich2 }:
+{ stdenv, autoreconfHook, pkgconfig, libnrm, gfortran, mpich2, openmp }:
 stdenv.mkDerivation {
   src = ../.;
   name = "nrm-extra";
-  nativeBuildInputs = [ autoreconfHook pkgconfig libnrm mpich2 ];
+  nativeBuildInputs = [ autoreconfHook pkgconfig libnrm mpich2 openmp ];
   buildInputs = [ gfortran ];
 }

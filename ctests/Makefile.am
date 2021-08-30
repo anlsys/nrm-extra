@@ -1,12 +1,2 @@
-AM_COLOR_TESTS = yes
+SUBDIRS = mpi omp
 
-AM_LDFLAGS = @MPILIBS@
-CC= @MPICC@
-
-TESTS_ENVIRONMENT= LD_PRELOAD=$(top_srcdir)/src/.libs/libnrm-pmpi.so \
-		   NRM_CMDID=argo \
-		   NRM_TRANSMIT=0
-MPI_TESTS = mpi_basic mpi_collectives
-
-check_PROGRAMS = $(MPI_TESTS)
-TESTS = $(MPI_TESTS)

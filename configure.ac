@@ -3,14 +3,14 @@ AC_INIT([nrm-extra],[0.1.0],[swann@anl.gov])
 
 
 # are we in the right source dir ?
-AC_CONFIG_SRCDIR([src/nrm_mpi.h])
+AC_CONFIG_SRCDIR([src/config.h])
 
 # build artefacts in separate dir
 AC_CONFIG_AUX_DIR([m4])
 AC_CONFIG_MACRO_DIR([m4])
 
 # automake should fail on any error
-AM_INIT_AUTOMAKE([-Wall -Werror foreign 1.12])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects 1.12])
 
 # check for programs
 AC_LANG([C])
@@ -24,6 +24,8 @@ AC_TYPE_INTPTR_T
 PKG_CHECK_MODULES([LIBNRM],[libnrm])
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
+AC_OPENMP
+
 AC_LANG_PUSH([Fortran])
 
 AC_PROG_FC
@@ -31,6 +33,8 @@ AC_FC_WRAPPERS
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_LANG_POP()
+
+
 
 AM_PROG_AR
 
@@ -45,5 +49,7 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 ctests/Makefile
+		 ctests/mpi/Makefile
+		 ctests/omp/Makefile
 		 ftests/Makefile])
 AC_OUTPUT
