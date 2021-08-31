@@ -35,7 +35,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          ./configure --prefix=`pwd`/build CC=clang
+          ./configure --prefix=`pwd`/build CC=clang-12
       - name: make
         run: |
           cd nrm-extra
@@ -81,7 +81,7 @@ jobs:
           mkdir out
           cd out
           mkdir build
-          ../configure --prefix=`pwd`/build CC=clang
+          ../configure --prefix=`pwd`/build CC=clang-12
       - name: make
         run: |
           cd nrm-extra/out
@@ -133,7 +133,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          ./configure --prefix=`pwd`/build CC=clang
+          ./configure --prefix=`pwd`/build CC=clang-12
       - name: make distcheck
         run: |
           cd nrm-extra
