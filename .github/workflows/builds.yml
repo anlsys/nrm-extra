@@ -1,0 +1,93 @@
+name: builds
+on: [push, pull_request]
+env:
+  CFLAGS: "-std=c99 -pedantic -Wall -Wextra -Werror -Wno-unused-but-set-parameter -Wno-builtin-declaration-mismatch"
+  VERBOSE: 1
+jobs:
+  generic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran openmpi
+      - name: configure
+        run: |
+          ./autogen.sh
+          mkdir build
+          ./configure --prefix=`pwd`/build
+      - run: make
+      - run: make check
+      - run: make install
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: generic
+          path: |
+            config.log
+            ctests/*.log
+            ftests/*.log
+  out-of-tree:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran openmpi
+      - name: configure
+        run: |
+          ./autogen.sh
+          mkdir out
+          cd out
+          mkdir build
+          ../configure --prefix=`pwd`/build
+      - run: make
+        working-directory: out
+      - run: make check
+        working-directory: out
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: out-of-tree
+          path: |
+            out/config.log
+            out/ctests/*.log
+            out/ftests/*.log
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v13
+        with:
+          nix_path: nixpkgs=channel:nixos-20.09
+      - run: nix-build -A nrm-extra
+  distcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran openmpi
+      - name: configure
+        run: |
+          ./autogen.sh
+          mkdir build
+          ./configure --prefix=`pwd`/build
+      - run: make distcheck
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: distcheck
+          path: |
+            config.log
+            ctests/*.log
+            ftests/*.log

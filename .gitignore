@@ -33,3 +33,5 @@ src/config.h
 src/stamp*
 config.status
 libtool
+*.log
+*.trs
