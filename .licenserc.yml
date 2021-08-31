@@ -1,0 +1,22 @@
+header:
+  license:
+    spdx-id: BSD-3-Clause
+    copyright-owner: UChicago Argonne, LLC
+    content: |
+      Copyright 2019 UChicago Argonne, LLC.
+      (c.f. AUTHORS, LICENSE)
+
+      This file is part of the nrm-extra project.
+      For more info, see https://github.com/anlsys/nrm-extra
+
+      SPDX-License-Identifier: BSD-3-Clause
+
+  paths:
+    - '**/*.c'
+    - '**/*.h'
+    - '**/*.h.in'
+  paths-ignore:
+    - 'src/omp/nrm_omp_callbacks.c'
+    - 'extra/omp/omp-tools.h'
+    - '**/*.f90'
+  comment: never

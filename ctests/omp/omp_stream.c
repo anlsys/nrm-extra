@@ -1,3 +1,12 @@
+/*******************************************************************************
+ * Copyright 2019 UChicago Argonne, LLC.
+ * (c.f. AUTHORS, LICENSE)
+ *
+ * This file is part of the nrm-extra project.
+ * For more info, see https://github.com/anlsys/nrm-extra
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 /*-----------------------------------------------------------------------*/
 /* Program: STREAM                                                       */
 /* Revision: $Id: stream.c,v 5.10 2013/01/17 16:01:06 mccalpin Exp mccalpin $ */

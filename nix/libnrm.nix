@@ -5,5 +5,5 @@ stdenv.mkDerivation {
   };
   name = "libnrm";
   nativeBuildInputs = [ autoreconfHook pkgconfig ];
-  buildInputs = [ zeromq czmq gfortran ];
+  buildInputs = [ zeromq gfortran ];
 }
