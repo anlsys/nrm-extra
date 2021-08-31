@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
