@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -35,7 +35,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          ./configure --prefix=`pwd`/build
+          ./configure --prefix=`pwd`/build CC=clang
       - name: make
         run: |
           cd nrm-extra
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -81,7 +81,7 @@ jobs:
           mkdir out
           cd out
           mkdir build
-          ../configure --prefix=`pwd`/build
+          ../configure --prefix=`pwd`/build CC=clang
       - name: make
         run: |
           cd nrm-extra/out
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -133,7 +133,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          ./configure --prefix=`pwd`/build
+          ./configure --prefix=`pwd`/build CC=clang
       - name: make distcheck
         run: |
           cd nrm-extra
