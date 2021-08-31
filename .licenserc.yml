@@ -15,8 +15,8 @@ header:
     - '**/*.c'
     - '**/*.h'
     - '**/*.h.in'
-    - '**/*.f90'
   paths-ignore:
     - 'src/omp/nrm_omp_callbacks.c'
     - 'extra/omp/omp-tools.h'
+    - '**/*.f90'
   comment: never
