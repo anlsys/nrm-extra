@@ -6,6 +6,8 @@ on:
   pull_request:
 
 env:
+  CC: clang
+  CFLAGS: "-I/usr/lib/llvm-10/include/openmp"
   VERBOSE: 1
   INSTALL_PATH: build
 jobs:
@@ -35,7 +37,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          ./configure --prefix=`pwd`/build CC=clang-12
+          ./configure --prefix=`pwd`/build CC=clang
       - name: make
         run: |
           cd nrm-extra
@@ -81,7 +83,7 @@ jobs:
           mkdir out
           cd out
           mkdir build
-          ../configure --prefix=`pwd`/build CC=clang-12
+          ../configure --prefix=`pwd`/build CC=clang
       - name: make
         run: |
           cd nrm-extra/out
@@ -133,7 +135,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          ./configure --prefix=`pwd`/build CC=clang-12
+          ./configure --prefix=`pwd`/build CC=clang
       - name: make distcheck
         run: |
           cd nrm-extra
