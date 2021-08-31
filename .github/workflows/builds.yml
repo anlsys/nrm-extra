@@ -37,9 +37,16 @@ jobs:
           ./autogen.sh
           mkdir build
           ./configure --prefix=`pwd`/build
-      - run: make
-      - run: make check
-      - run: make install
+      - name: make
+        run: |
+          cd nrm-extra
+          make
+      - name: make check
+        run: |
+          cd nrm-extra
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
+          make check
+          make install
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -66,7 +73,6 @@ jobs:
           make install
       - uses: actions/checkout@v2
         with:
-          submodules: true
           path: nrm-extra
       - name: configure
         run: |
@@ -77,10 +83,16 @@ jobs:
           cd out
           mkdir build
           ../configure --prefix=`pwd`/build
-      - run: make
-        working-directory: out
-      - run: make check
-        working-directory: out
+      - name: make
+        run: |
+          cd nrm-extra/out
+          make
+      - name: make check
+        run: |
+          cd nrm-extra/out
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
+          make check
+          make install
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
@@ -93,9 +105,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true
-          fetch-depth: 0
       - uses: cachix/install-nix-action@v13
         with:
           nix_path: nixpkgs=channel:nixos-20.09
@@ -118,7 +127,6 @@ jobs:
           make install
       - uses: actions/checkout@v2
         with:
-          submodules: true
           path: nrm-extra
       - name: configure
         run: |
@@ -127,7 +135,12 @@ jobs:
           ./autogen.sh
           mkdir build
           ./configure --prefix=`pwd`/build
-      - run: make distcheck
+      - name: make distcheck
+        run: |
+          cd nrm-extra
+          export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
+          make distcheck
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
