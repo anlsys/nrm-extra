@@ -1,9 +1,8 @@
 # see semver.org for version info
 AC_INIT([nrm-extra],[0.1.0],[swann@anl.gov])
 
-
 # are we in the right source dir ?
-AC_CONFIG_SRCDIR([src/config.h])
+AC_CONFIG_SRCDIR([src/mpi/mpi_api.c])
 
 # build artefacts in separate dir
 AC_CONFIG_AUX_DIR([m4])

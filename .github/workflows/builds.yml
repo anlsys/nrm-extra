@@ -1,20 +1,39 @@
 name: builds
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
 env:
   CFLAGS: "-std=c99 -pedantic -Wall -Wextra -Werror -Wno-unused-but-set-parameter -Wno-builtin-declaration-mismatch"
   VERBOSE: 1
+  INSTALL_PATH: build
 jobs:
   generic:
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich
+      - uses: actions/checkout@v2
+        with:
+          repository: anlsys/libnrm
+          path: libnrm
+      - name: configure
+        run: |
+          cd libnrm
+          ./autogen.sh
+          ./configure --prefix=$GITHUB_WORKSPACE/$INSTALL_PATH
+          make
+          make install
       - uses: actions/checkout@v2
         with:
           submodules: true
-          fetch-depth: 0
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran mpich
+          path: nrm-extra
       - name: configure
         run: |
+          export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
+          cd nrm-extra
           ./autogen.sh
           mkdir build
           ./configure --prefix=`pwd`/build
@@ -26,20 +45,33 @@ jobs:
         with:
           name: generic
           path: |
-            config.log
-            ctests/*.log
-            ftests/*.log
+            nrm-extra/config.log
+            nrm-extra/ctests/*.log
+            nrm-extra/ftests/*.log
   out-of-tree:
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich
+      - uses: actions/checkout@v2
+        with:
+          repository: anlsys/libnrm
+          path: libnrm
+      - name: configure
+        run: |
+          cd libnrm
+          ./autogen.sh
+          ./configure --prefix=$GITHUB_WORKSPACE/$INSTALL_PATH
+          make
+          make install
       - uses: actions/checkout@v2
         with:
           submodules: true
-          fetch-depth: 0
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran mpich
+          path: nrm-extra
       - name: configure
         run: |
+          export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
+          cd nrm-extra
           ./autogen.sh
           mkdir out
           cd out
@@ -54,9 +86,9 @@ jobs:
         with:
           name: out-of-tree
           path: |
-            out/config.log
-            out/ctests/*.log
-            out/ftests/*.log
+            nrm-extra/out/config.log
+            nrm-extra/out/ctests/*.log
+            nrm-extra/out/ftests/*.log
   nix:
     runs-on: ubuntu-latest
     steps:
@@ -71,14 +103,27 @@ jobs:
   distcheck:
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich
+      - uses: actions/checkout@v2
+        with:
+          repository: anlsys/libnrm
+          path: libnrm
+      - name: configure
+        run: |
+          cd libnrm
+          ./autogen.sh
+          ./configure --prefix=$GITHUB_WORKSPACE/$INSTALL_PATH
+          make
+          make install
       - uses: actions/checkout@v2
         with:
           submodules: true
-          fetch-depth: 0
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran mpich
+          path: nrm-extra
       - name: configure
         run: |
+          export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
+          cd nrm-extra
           ./autogen.sh
           mkdir build
           ./configure --prefix=`pwd`/build
@@ -88,6 +133,6 @@ jobs:
         with:
           name: distcheck
           path: |
-            config.log
-            ctests/*.log
-            ftests/*.log
+            nrm-extra/config.log
+            nrm-extra/ctests/*.log
+            nrm-extra/ftests/*.log
