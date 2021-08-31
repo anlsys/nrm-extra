@@ -12,7 +12,7 @@ jobs:
           submodules: true
           fetch-depth: 0
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran openmpi
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran mpich
       - name: configure
         run: |
           ./autogen.sh
@@ -37,7 +37,7 @@ jobs:
           submodules: true
           fetch-depth: 0
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran openmpi
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran mpich
       - name: configure
         run: |
           ./autogen.sh
@@ -76,7 +76,7 @@ jobs:
           submodules: true
           fetch-depth: 0
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran openmpi
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config gfortran mpich
       - name: configure
         run: |
           ./autogen.sh
