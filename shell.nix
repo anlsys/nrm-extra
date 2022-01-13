@@ -9,6 +9,8 @@ mkShell.override { stdenv = pkgs.stdenv; } {
     gdb
     # style checks
     clang-tools
+    python3
+    llvmPackages.clang-unwrapped.python
   ];
 
   CFLAGS = "-Wall -Wextra";
