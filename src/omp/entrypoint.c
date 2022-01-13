@@ -50,7 +50,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
 	nrm_fini(ctxt);
-	nrm_scope_delete(scope);
+	nrm_scope_delete(global_scope);
 	nrm_ctxt_delete(ctxt);
 	return;
 }
