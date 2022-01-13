@@ -35,6 +35,7 @@
 #include "nrm_mpi.h"
 
 static struct nrm_context *ctxt;
+static struct nrm_scope *scope;
 
 NRM_MPI_DECL(MPI_Allreduce,
              int,
@@ -47,10 +48,14 @@ NRM_MPI_DECL(MPI_Allreduce,
 {
 	NRM_MPI_RESOLVE(MPI_Allreduce);
 
-	nrm_send_progress(ctxt, 1);
-	int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
+    scope = nrm_scope_create();
+    nrm_scope_threadshared(scope);
+	nrm_send_progress(ctxt, 1, scope);
+	
+    int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
 	                           datatype, op, comm);
-	nrm_send_progress(ctxt, 1);
+    nrm_scope_threadshared(scope);
+	nrm_send_progress(ctxt, 1, scope);
 	return ret;
 }
 
@@ -58,9 +63,16 @@ NRM_MPI_DECL(MPI_Barrier, int, MPI_Comm comm)
 {
 	NRM_MPI_RESOLVE(MPI_Barrier);
 
-	nrm_send_progress(ctxt, 1);
-	int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
-	nrm_send_progress(ctxt, 1);
+    scope = nrm_scope_create();
+    nrm_scope_threadshared(scope);
+	nrm_send_progress(ctxt, 1, scope);
+	
+    int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
+    
+    scope = nrm_scope_create();
+    nrm_scope_threadshared(scope);
+	nrm_send_progress(ctxt, 1, scope);
+	
 	return ret;
 }
 
