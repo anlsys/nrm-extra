@@ -47,14 +47,10 @@ NRM_MPI_DECL(MPI_Allreduce,
              MPI_Comm comm)
 {
 	NRM_MPI_RESOLVE(MPI_Allreduce);
-
-    scope = nrm_scope_create();
-    nrm_scope_threadshared(scope);
 	nrm_send_progress(ctxt, 1, scope);
-	
-    int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
-	                           datatype, op, comm);
-    nrm_scope_threadshared(scope);
+
+	int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
+				   datatype, op, comm);
 	nrm_send_progress(ctxt, 1, scope);
 	return ret;
 }
@@ -62,17 +58,11 @@ NRM_MPI_DECL(MPI_Allreduce,
 NRM_MPI_DECL(MPI_Barrier, int, MPI_Comm comm)
 {
 	NRM_MPI_RESOLVE(MPI_Barrier);
+	nrm_send_progress(ctxt, 1, scope);
 
-    scope = nrm_scope_create();
-    nrm_scope_threadshared(scope);
+	int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
 	nrm_send_progress(ctxt, 1, scope);
-	
-    int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
-    
-    scope = nrm_scope_create();
-    nrm_scope_threadshared(scope);
-	nrm_send_progress(ctxt, 1, scope);
-	
+
 	return ret;
 }
 
@@ -92,6 +82,7 @@ NRM_MPI_DECL(MPI_Finalize, int, void)
 {
 	NRM_MPI_RESOLVE(MPI_Finalize);
 	nrm_fini(ctxt);
+	nrm_scope_delete(scope);
 	nrm_ctxt_delete(ctxt);
 	return NRM_MPI_REALNAME(MPI_Finalize);
 }
@@ -109,5 +100,7 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 
 	ctxt = nrm_ctxt_create();
 	nrm_init(ctxt, "nrm-pmpi", rank, cpu);
+	scope = nrm_scope_create();
+	nrm_scope_threadshared(scope);
 	return ret;
 }

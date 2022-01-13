@@ -17,6 +17,7 @@ static ompt_start_tool_result_t nrm_ompt_start;
 ompt_set_callback_t nrm_ompt_set_callback;
 
 struct nrm_context *ctxt;
+nrm_scope_t *global_scope;
 
 int nrm_ompt_initialize(ompt_function_lookup_t lookup,
                         int initial_device_num,
@@ -26,6 +27,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 
 	/* initialize the NRM context */
 	ctxt = nrm_ctxt_create();
+	global_scope = nrm_scope_create();
 	assert(ctxt != NULL);
 
 	/* right now nrm ctxt need to know the rank and cpuid of the application
@@ -48,6 +50,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
 	nrm_fini(ctxt);
+	nrm_scope_delete(scope);
 	nrm_ctxt_delete(ctxt);
 	return;
 }

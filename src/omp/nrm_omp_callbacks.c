@@ -2,46 +2,36 @@
 #include <assert.h>
 #include "nrm_omp.h"
 
-static struct nrm_scope **thread_scope;
-
 void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type, ompt_data_t *thread_data)
 {
-	thread_scope[omp_get_thread_num()] = malloc(sizeof(nrm_scope_t*));
-    thread_scope[omp_get_thread_num()] = nrm_scope_create();
-    nrm_scope_threadprivate(thread_scope[omp_get_thread_num()]);
-    nrm_send_progress(ctxt, 1, thread_scope[omp_get_thread_num()]);
+    nrm_scope_t *scope = nrm_scope_create();
+    thread_data->ptr = (void*)scope;
+    nrm_scope_threadprivate(scope);
+    nrm_scope_threadshared(global_scope);
+    nrm_send_progress(ctxt, 1, scope);
 }
 
 void nrm_ompt_callback_thread_end_cb(ompt_data_t *thread_data)
 {
-    thread_scope[omp_get_thread_num()] = malloc(sizeof(nrm_scope_t*));
-    thread_scope[omp_get_thread_num()] = nrm_scope_create();
-    nrm_scope_threadprivate(thread_scope[omp_get_thread_num()]);
-    nrm_send_progress(ctxt, 1, thread_scope[omp_get_thread_num()]);
+    nrm_scope_t *scope = (nrm_scope_t *)thread_data->ptr;
+    nrm_scope_threadprivate(scope);
+    nrm_send_progress(ctxt, 1, scope);
+    nrm_scope_delete(scope);
+    thread_data->ptr = NULL;
 }
 
 void nrm_ompt_callback_parallel_begin_cb(ompt_data_t *encountering_task_data, const ompt_frame_t *encountering_task_frame, ompt_data_t *parallel_data, unsigned int requested_parallelism, int flags, const void *codeptr_ra)
 {
-    thread_scope[omp_get_thread_num()] = malloc(sizeof(nrm_scope_t*));
-    thread_scope[omp_get_thread_num()] = nrm_scope_create();
-    nrm_scope_threadprivate(thread_scope[omp_get_thread_num()]);
-    nrm_send_progress(ctxt, 1, thread_scope[omp_get_thread_num()]);
+    nrm_send_progress(ctxt, 1, global_scope);
 }
 
 void nrm_ompt_callback_parallel_end_cb(ompt_data_t *parallel_data, ompt_data_t *encountering_task_data, int flags, const void *codeptr_ra)
 {
-    thread_scope[omp_get_thread_num()] = malloc(sizeof(nrm_scope_t*));
-    thread_scope[omp_get_thread_num()] = nrm_scope_create();
-    nrm_scope_threadprivate(thread_scope[omp_get_thread_num()]);
-    nrm_send_progress(ctxt, 1, thread_scope[omp_get_thread_num()]);
+    nrm_send_progress(ctxt, 1, global_scope);
 }
 
 void nrm_ompt_callback_work_cb(ompt_work_t wstype, ompt_scope_endpoint_t endpoint, ompt_data_t *parallel_data, ompt_data_t *task_data, uint64_t count, const void *codeptr_ra)
 {
-    thread_scope[omp_get_thread_num()] = malloc(sizeof(nrm_scope_t*));
-    thread_scope[omp_get_thread_num()] = nrm_scope_create();
-    nrm_scope_threadprivate(thread_scope[omp_get_thread_num()]);
-    nrm_send_progress(ctxt, 1, thread_scope[omp_get_thread_num()]);
 }
 
 void nrm_ompt_callback_dispatch_cb(ompt_data_t *parallel_data, ompt_data_t *task_data, ompt_dispatch_t kind, ompt_data_t instance)
@@ -62,10 +52,6 @@ void nrm_ompt_callback_task_dependence_cb(ompt_data_t *src_task_data, ompt_data_
 
 void nrm_ompt_callback_task_schedule_cb(ompt_data_t *prior_task_data, ompt_task_status_t prior_task_status, ompt_data_t *next_task_data)
 {
-    thread_scope[omp_get_thread_num()] = malloc(sizeof(nrm_scope_t*));
-    thread_scope[omp_get_thread_num()] = nrm_scope_create();
-    nrm_scope_threadprivate(thread_scope[omp_get_thread_num()]);
-    nrm_send_progress(ctxt, 1, thread_scope[omp_get_thread_num()]);
 }
 
 void nrm_ompt_callback_implicit_task_cb(ompt_scope_endpoint_t endpoint, ompt_data_t *parallel_data, ompt_data_t *task_data, unsigned int actual_parallelism, unsigned int index, int flags)

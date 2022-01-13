@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 extern struct nrm_context *ctxt;
+extern nrm_scope_t *global_scope;
 extern ompt_set_callback_t nrm_ompt_set_callback;
 
 void nrm_ompt_register_cbs(void);
