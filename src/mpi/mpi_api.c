@@ -50,7 +50,7 @@ NRM_MPI_DECL(MPI_Allreduce,
 	nrm_send_progress(ctxt, 1, scope);
 
 	int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
-				   datatype, op, comm);
+	                           datatype, op, comm);
 	nrm_send_progress(ctxt, 1, scope);
 	return ret;
 }
