@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright 2019 UChicago Argonne, LLC.
+ * Copyright 2021 UChicago Argonne, LLC.
  * (c.f. AUTHORS, LICENSE)
  *
  * This file is part of the nrm-extra project.
@@ -8,13 +8,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
+ /* Filename: perfwrapper.c
+  *
+  * Description:    Implements middleware between papi and the NRM
+  *                 downstream interface.
+  */
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <sched.h>
 #include <stdio.h> // printf
 #include <stdlib.h> // exit, atoi
 #include <time.h>
-#include <unistd.h>
+#include <unistd.h> // getopt
+#include <getopt.h> // getopt_long
 
 #include <nrm.h>
 #include <papi.h>
@@ -35,13 +42,43 @@ int logging(FILE *stream, const char *fmt, int level, va_list ap)
 
 int main(int argc, char **argv)
 {
-	int err;
+	int c, err, verb = 0;
+	double freq = 10;
+	char *event = "PAPI_TOT_INS";
+
 	/* TODO getopt_long is better */
 
-	double frequency = 10;
-	char *event_name = "PAPI_TOT_INS";
-	char *cmd = "ls -al";
+	while (1) {
 
+		static struct option long_options[] = {
+			{"verbose",   optional_argument, 0, 'v'},
+			{"frequency", optional_argument, 0, 'f'},
+			{"event",     required_argument, 0, 'e'},
+			{0,           0,                 0,  0}
+		};
+
+		int option_index = 0;
+		c = getopt_long(argc, argv, "v:f:e:", long_options, &option_index);
+
+		if (c == -1) break;
+		switch (c) {
+			case 'v':
+			  verb = 1;
+			  break;
+			case 'f':
+			  freq = atoi(optarg);
+			  break;
+			case 'e':
+			  event = optarg;
+			default:
+			  break;
+		}
+	}
+	printf("verbose=%d; freq=%f; event=%s\n", verb, freq, event);
+
+	// double frequency = 10;
+	// char *event_name = "PAPI_TOT_INS";
+	char *cmd = "ls -al";
 	int rank = 0, cpu;
 	cpu = sched_getcpu();
 
@@ -62,7 +99,7 @@ int main(int argc, char **argv)
 
 	/* launch? command, sample counters */
 	unsigned long long counter;
-	
+
 	int pid = fork();
 	if(pid < 0) {
 		/* error */
