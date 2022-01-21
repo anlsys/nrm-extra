@@ -17,11 +17,11 @@
 #define _GNU_SOURCE
 #include <assert.h>
 #include <sched.h>
-#include <stdio.h> // printf
-#include <stdlib.h> // exit, atoi
+#include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
-#include <unistd.h> // getopt
-#include <getopt.h> // getopt_long
+#include <unistd.h>
+#include <getopt.h>
 
 #include <nrm.h>
 #include <papi.h>
@@ -30,10 +30,12 @@ static struct nrm_context *ctxt;
 static struct nrm_scope *scope;
 
 int log_level = 1;
+static int verbose_flag;
+
 char *usage =
-  "usage: perfwrapper [options] -e [papi event]\n"
+  "usage: perfwrapper [options] -e [papi event] [command]\n"
   "   options:\n"
-  "      -e, --events        PAPI preset event names. Default: PAPI_TOT_INS\n"
+  "      -e, --event         PAPI preset event name. Default: PAPI_TOT_INS\n"
   "      -f, --frequency     Frequency in hz to poll. Default: 10\n"
   "      -v, --verbose       Produce verbose output. Log messages will be displayed to stderr\n"
   "      -h, --help          Displays this help message\n";
@@ -49,30 +51,28 @@ int logging(FILE *stream, const char *fmt, int level, va_list ap)
 
 int main(int argc, char **argv)
 {
-	int c, err, verb = 0;
+	int c, err;
 	double freq = 10;
 	char *event = "PAPI_TOT_INS";
-
-	/* TODO getopt_long is better */
+  char *cmd;
 
 	while (1) {
-
 		static struct option long_options[] = {
-			{"verbose",   no_argument,       0, 'v'},
+			{"verbose",   no_argument,       &verbose_flag, 1},
 			{"frequency", optional_argument, 0, 'f'},
-			{"events",    required_argument, 0, 'e'},
 			{"help",      no_argument,       0, 'h'},
-			{0,           0,                 0,  0}
+      {"event",     required_argument, 0, 'e'},
+			{0, 0, 0, 0}
 		};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "vf:e:h", long_options, &option_index);
+		c = getopt_long(argc, argv, "+vf:e:h", long_options, &option_index);
 
 		if (c == -1) break;
 		switch (c) {
-			case 'v':
-			  verb = 1;
-			  break;
+			case 0:
+			  if (long_options[option_index].flag != 0)
+			     break;
 			case 'f':
 			  freq = atoi(optarg);
 			  break;
@@ -82,15 +82,29 @@ int main(int argc, char **argv)
       case 'h':
         fprintf(stderr, "%s", usage);
         break;
+      case '?':
+        break;
       default:
         fprintf(stderr, "%s", usage);
-        break;
+        exit(EXIT_FAILURE);
 		}
 	}
-	printf("verbose=%d; freq=%f; event=%s\n", verb, freq, event);
 
-	// double frequency = 10;
-	// char *event_name = "PAPI_TOT_INS";
+	printf("verbose=%d; freq=%f; event=%s\n", verbose_flag, freq, event);
+
+  if (optind >= argc) {
+        fprintf(stderr, "Expected command after options.\n");
+        exit(EXIT_FAILURE);
+  }
+
+  if (optind < argc) {
+    while (optind < argc)
+      printf("%s ", argv[optind++]);
+    printf("\n");
+  }
+
+  // exit(EXIT_SUCCESS);
+
 	char *cmd = "ls -al";
 	int rank = 0, cpu;
 	cpu = sched_getcpu();
