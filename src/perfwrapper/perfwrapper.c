@@ -30,6 +30,13 @@ static struct nrm_context *ctxt;
 static struct nrm_scope *scope;
 
 int log_level = 1;
+char *usage =
+  "usage: perfwrapper [options] -e [papi event]\n"
+  "   options:\n"
+  "      -e, --events        PAPI preset event names. Default: PAPI_TOT_INS\n"
+  "      -f, --frequency     Frequency in hz to poll. Default: 10\n"
+  "      -v, --verbose       Produce verbose output. Log messages will be displayed to stderr\n"
+  "      -h, --help          Displays this help message\n";
 
 int logging(FILE *stream, const char *fmt, int level, va_list ap)
 {
@@ -53,12 +60,13 @@ int main(int argc, char **argv)
 		static struct option long_options[] = {
 			{"verbose",   optional_argument, 0, 'v'},
 			{"frequency", optional_argument, 0, 'f'},
-			{"event",     required_argument, 0, 'e'},
+			{"events",    required_argument, 0, 'e'},
+			{"help",      optional_argument, 0, 'h'},
 			{0,           0,                 0,  0}
 		};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "v:f:e:", long_options, &option_index);
+		c = getopt_long(argc, argv, "v:f:e:h:", long_options, &option_index);
 
 		if (c == -1) break;
 		switch (c) {
@@ -70,8 +78,13 @@ int main(int argc, char **argv)
 			  break;
 			case 'e':
 			  event = optarg;
-			default:
-			  break;
+        break;
+      case 'h':
+        fprintf(stderr, "%s", usage);
+        break;
+      default:
+        fprintf(stderr, "%s", usage);
+        break;
 		}
 	}
 	printf("verbose=%d; freq=%f; event=%s\n", verb, freq, event);
