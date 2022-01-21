@@ -58,15 +58,15 @@ int main(int argc, char **argv)
 	while (1) {
 
 		static struct option long_options[] = {
-			{"verbose",   optional_argument, 0, 'v'},
+			{"verbose",   no_argument,       0, 'v'},
 			{"frequency", optional_argument, 0, 'f'},
 			{"events",    required_argument, 0, 'e'},
-			{"help",      optional_argument, 0, 'h'},
+			{"help",      no_argument,       0, 'h'},
 			{0,           0,                 0,  0}
 		};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "v:f:e:h:", long_options, &option_index);
+		c = getopt_long(argc, argv, "vf:e:h", long_options, &option_index);
 
 		if (c == -1) break;
 		switch (c) {
