@@ -53,7 +53,9 @@ int main(int argc, char **argv)
 {
 	int c, err;
 	double freq = 10;
-	char *event = "PAPI_TOT_INS";
+	char EventCodeStr[PAPI_MAX_STR_LEN] = "PAPI_TOT_INS";
+  char EventDescr[PAPI_MAX_STR_LEN];
+  char EventLabel[20];
   char *cmd;
 
 	while (1) {
@@ -77,7 +79,7 @@ int main(int argc, char **argv)
 			  freq = atoi(optarg);
 			  break;
 			case 'e':
-			  event = optarg;
+			  EventCodeStr = optarg;
         break;
       case 'h':
         fprintf(stderr, "%s", usage);
@@ -90,22 +92,19 @@ int main(int argc, char **argv)
 		}
 	}
 
-	printf("verbose=%d; freq=%f; event=%s\n", verbose_flag, freq, event);
+	printf("verbose=%d; freq=%f; event=%s\n", verbose_flag, freq, EventCodeStr);
 
   if (optind >= argc) {
         fprintf(stderr, "Expected command after options.\n");
         exit(EXIT_FAILURE);
   }
 
-  if (optind < argc) {
+  if (optind < argc) { // temp: parses rest of argv, cmd + options
     while (optind < argc)
       printf("%s ", argv[optind++]);
     printf("\n");
   }
 
-  // exit(EXIT_SUCCESS);
-
-	char *cmd = "ls -al";
 	int rank = 0, cpu;
 	cpu = sched_getcpu();
 
@@ -116,13 +115,32 @@ int main(int argc, char **argv)
 	scope = nrm_scope_create();
 	nrm_scope_threadshared(scope);
 
+  // initialize PAPI
+  int papi_retval;
+  papi_retval = PAPI_library_init(PAPI_VER_CURRENT);
+
+  if (papi_retval != PAPI_VER_CURRENT){
+    fprintf(stderr, "PAPI library init error\n");
+    exit(EXIT_FAILURE);
+  }
+
 	/* setup PAPI interface */
-	int eventcode, eventset;
-	err = PAPI_event_name_to_code(event_name, &eventcode);
+	int EventCode, eventset;
+	err = PAPI_event_name_to_code(EventCodeStr, &EventCode);
 	assert(err == PAPI_OK);
 
+  err = PAPI_label_event(EventCode, EventLabel);
+  assert(err == PAPI_OK);
+
+  err = PAPI_describe_event(EventCodeStr, &EventCode, EventDescr);
+  assert(err == PAPI_OK);
+
+  printf("Name: %s\nCode: %x\n", EventCodeStr, EventCode);
+  printf("Label: %s\n", EventLabel);
+  printf("Description: %s\n", EventDescr);
+
 	PAPI_create_eventset(&eventset);
-	PAPI_add_event(eventset, eventcode);
+	PAPI_add_event(eventset, EventCode);
 
 	/* launch? command, sample counters */
 	unsigned long long counter;
