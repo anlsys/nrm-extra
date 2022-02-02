@@ -16,6 +16,7 @@
 
 #define _GNU_SOURCE
 #include <assert.h>
+#include <string.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,8 +24,8 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include <nrm.h>
-#include <papi.h>
+#include "nrm.h"
+#include "papi.h"
 
 static struct nrm_context *ctxt;
 static struct nrm_scope *scope;
@@ -79,7 +80,7 @@ int main(int argc, char **argv)
 			  freq = atoi(optarg);
 			  break;
 			case 'e':
-			  EventCodeStr = optarg;
+			  strcpy(EventCodeStr, optarg);
         break;
       case 'h':
         fprintf(stderr, "%s", usage);
