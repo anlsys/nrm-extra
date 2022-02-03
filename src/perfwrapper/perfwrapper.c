@@ -126,42 +126,38 @@ int main(int argc, char **argv)
   }
 
 	/* setup PAPI interface */
-	int EventCode, eventset;
+	int EventCode, EventSet = PAPI_NULL;
+  PAPI_event_info_t info;
+
 	err = PAPI_event_name_to_code(EventCodeStr, &EventCode);
 	assert(err == PAPI_OK);
 
-  err = PAPI_label_event(EventCode, EventLabel);
+	err = PAPI_create_eventset(&EventSet);
   assert(err == PAPI_OK);
 
-  err = PAPI_describe_event(EventCodeStr, &EventCode, EventDescr);
+	err = PAPI_add_event(EventSet, EventCode);
   assert(err == PAPI_OK);
-
-  printf("Name: %s\nCode: %x\n", EventCodeStr, EventCode);
-  printf("Label: %s\n", EventLabel);
-  printf("Description: %s\n", EventDescr);
-
-	PAPI_create_eventset(&eventset);
-	PAPI_add_event(eventset, EventCode);
 
 	/* launch? command, sample counters */
 	unsigned long long counter;
 
 	int pid = fork();
 	if(pid < 0) {
-		/* error */
+    fprintf(stderr, "perfwrapper fork error\n");
+		exit(EXIT_FAILURE);
 	}
 	else if(pid == 0) {
 		/* TODO child, needs to exec the cmd */
 	}
 	else {
 		/* us, need to sample counters */
-		PAPI_attach(eventset, pid);
-		PAPI_start(eventset);
+		PAPI_attach(EventSet, pid);
+		PAPI_start(EventSet);
 
 		/* TODO: sleep for a frequency */
 
 		/* sample and report */
-		PAPI_read(eventset, &counter);
+		PAPI_read(EventSet, &counter);
 		nrm_send_progress(ctxt, counter, scope);
 
 		/* TODO loop until child exits */
