@@ -41,6 +41,7 @@ LT_INIT
 AC_SEARCH_LIBS([dlsym], [dl dld], [], [
   AC_MSG_ERROR([unable to find the dlsym() function])
 ])
+AC_CHECK_LIB(m, ceil,,[AC_MSG_ERROR([missing libmath])])
 
 AC_CONFIG_HEADERS([src/config.h])
 
