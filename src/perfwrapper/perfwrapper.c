@@ -113,9 +113,9 @@ int main(int argc, char **argv)
     ctxt = nrm_ctxt_create();
     // assert(ctxt != NULL); already checked in nrm_ctxt_create
 
-    nrm_init(&ctxt, "nrm-perfwrapper", rank, cpu);
+    nrm_init(ctxt, "nrm-perfwrapper", rank, cpu);
     scope = nrm_scope_create();
-    nrm_scope_threadshared(&scope);
+    nrm_scope_threadshared(scope);
 
     // initialize PAPI
     int papi_retval;
