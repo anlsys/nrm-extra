@@ -98,8 +98,8 @@ int main(int argc, char **argv)
       strcpy(EventCodeStr, optarg);
       break;
     case 'h':
-      normal("%s", usage);
-      break;
+      fprintf(stderr, "%s", usage);
+      exit(EXIT_SUCCESS);
     case '?':
     default:
       error("Wrong option argument\n");
