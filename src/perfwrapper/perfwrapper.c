@@ -130,24 +130,30 @@ int main(int argc, char **argv)
   papi_retval = PAPI_library_init(PAPI_VER_CURRENT);
 
   if (papi_retval != PAPI_VER_CURRENT) {
-    error("PAPI library init error\n");
+    error("PAPI library init error: %s\n", PAPI_strerror(papi_retval));
     exit(EXIT_FAILURE);
   }
-  verbose("PAPI v%f initialized.\n", papi_retval);
+
+  verbose("PAPI initialized.\n");
 
   /* setup PAPI interface */
   int EventCode, EventSet = PAPI_NULL;
-  PAPI_event_info_t info;
 
   err = PAPI_event_name_to_code(EventCodeStr, &EventCode);
-  assert(err == PAPI_OK);
-
+  if (err != PAPI_OK){
+    error("PAPI event_name translation error: %s\n", PAPI_strerror(err));
+  }
   err = PAPI_create_eventset(&EventSet);
-  assert(err == PAPI_OK);
+  if (err != PAPI_OK){
+    error("PAPI eventset creation error: %s\n", PAPI_strerror(err));
+  }
 
   err = PAPI_add_event(EventSet, EventCode);
-  assert(err == PAPI_OK);
-  verbose("%s translated as PAPI code %i, registered to PAPI.\n", EventCodeStr, EventCode);
+  if (err != PAPI_OK){
+    error("PAPI eventset append error: %s\n", PAPI_strerror(err));
+  }
+
+  verbose("PAPI code string %s converted to PAPI code %i, and registered.\n", EventCodeStr, EventCode);
 
   /* launch? command, sample counters */
   unsigned long long counter;
@@ -164,10 +170,18 @@ int main(int argc, char **argv)
   }
 
   /* us, need to sample counters */
-  PAPI_attach(EventSet, pid);
-  verbose("PAPI attached to process with pid %i", pid);
-  PAPI_start(EventSet);
-  verbose("Initializing PAPI-event read/send to NRM.\n");
+  err = PAPI_attach(EventSet, pid);
+  if (err != PAPI_OK){
+    error("PAPI eventset attach error: %s\n", PAPI_strerror(err));
+  }
+  verbose("PAPI attached to process with pid %i\n", pid);
+
+  err = PAPI_start(EventSet);
+  if (err != PAPI_OK){
+    error("PAPI start error: %s\n", PAPI_strerror(err));
+  }
+  verbose("PAPI started. Initializing event read/send to NRM\n", EventCodeStr, EventCode);
+
   do {
 
     /* sleep for a frequency */
@@ -182,7 +196,12 @@ int main(int argc, char **argv)
     } while (err == -1 && errno == EINTR);
 
     /* sample and report */
-    PAPI_read(EventSet, &counter);
+    err = PAPI_read(EventSet, &counter);
+    if (err != PAPI_OK){
+      error("PAPI event read error: %s\n", PAPI_strerror(err));
+      exit(EXIT_FAILURE);
+    }
+
     nrm_send_progress(ctxt, counter, scope);
 
     /* loop until child exits */
@@ -199,7 +218,7 @@ int main(int argc, char **argv)
   PAPI_stop(EventSet, &counter);
   nrm_send_progress(ctxt, counter, scope);
 
-  verbose("Finalizing NRM context.\n");
+  verbose("Finalizing NRM context. Exiting.\n");
   /* finalize program */
   nrm_fini(ctxt);
   nrm_scope_delete(scope);
