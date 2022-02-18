@@ -184,8 +184,7 @@ int main(int argc, char **argv)
 	if (err != PAPI_OK) {
 		error("PAPI start error: %s\n", PAPI_strerror(err));
 	}
-	verbose("PAPI started. Initializing event read/send to NRM\n",
-	        EventCodeStr, EventCode);
+	verbose("PAPI started. Initializing event read/send to NRM\n");
 
 	do {
 
