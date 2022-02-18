@@ -15,6 +15,7 @@ jobs:
     steps:
       - run: sudo apt-get update
       - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5
+      - run: git clone https://bitbucket.org/icl/papi.git; cd papi/src; ./configure --prefix=$PWD/install; make && make install; pwd
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
