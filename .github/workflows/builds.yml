@@ -9,14 +9,12 @@ env:
   CFLAGS: "-I/usr/lib/llvm-10/include/openmp"
   VERBOSE: 1
   INSTALL_PATH: build
-  PAPI_DIR: "/home/runner/work/nrm-extra/nrm-extra/papi/src/install"
 jobs:
   generic:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5
-      - run: git clone https://bitbucket.org/icl/papi.git; cd papi/src; ./configure --prefix=$PWD/install; make && make install; pwd
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -35,7 +33,6 @@ jobs:
       - name: configure
         run: |
           export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
-          export PKG_CONFIG_PATH=$PAPI_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
           cd nrm-extra
           ./autogen.sh
           mkdir build
@@ -64,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -118,7 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
