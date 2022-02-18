@@ -9,6 +9,7 @@ env:
   CFLAGS: "-I/usr/lib/llvm-10/include/openmp"
   VERBOSE: 1
   INSTALL_PATH: build
+  PAPI_DIR: "/home/runner/work/nrm-extra/nrm-extra/papi/src/install"
 jobs:
   generic:
     runs-on: ubuntu-latest
@@ -37,6 +38,8 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
+          export PATH=$PAPI_DIR/bin:$PATH
+          export LD_LIBRARY_PATH=$PAPI_DIR/lib:$LD_LIBRARY_PATH
           ./configure --prefix=`pwd`/build
       - name: make
         run: |
