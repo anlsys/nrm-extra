@@ -36,8 +36,6 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          export PATH=$PAPI_DIR/bin:$PATH
-          export LD_LIBRARY_PATH=$PAPI_DIR/lib:$LD_LIBRARY_PATH
           ./configure --prefix=`pwd`/build
       - name: make
         run: |
