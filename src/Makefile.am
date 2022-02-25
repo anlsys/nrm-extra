@@ -1,1 +1,1 @@
-SUBDIRS = mpi omp
+SUBDIRS = mpi omp perfwrapper

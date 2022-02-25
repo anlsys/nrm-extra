@@ -21,6 +21,7 @@ AC_TYPE_SIZE_T
 AC_TYPE_INTPTR_T
 
 PKG_CHECK_MODULES([LIBNRM],[libnrm])
+PKG_CHECK_MODULES([PAPI],[papi])
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_OPENMP
@@ -33,8 +34,6 @@ AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_LANG_POP()
 
-
-
 AM_PROG_AR
 
 # check for libtool
@@ -42,6 +41,7 @@ LT_INIT
 AC_SEARCH_LIBS([dlsym], [dl dld], [], [
   AC_MSG_ERROR([unable to find the dlsym() function])
 ])
+AC_CHECK_LIB(m, ceil,,[AC_MSG_ERROR([missing libmath])])
 
 AC_CONFIG_HEADERS([src/config.h])
 
@@ -49,6 +49,7 @@ AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 src/mpi/Makefile
 		 src/omp/Makefile
+		 src/perfwrapper/Makefile
 		 ctests/Makefile
 		 ctests/mpi/Makefile
 		 ctests/omp/Makefile
