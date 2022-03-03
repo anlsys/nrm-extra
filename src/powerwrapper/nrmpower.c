@@ -38,7 +38,7 @@ static struct nrm_scope *scope;
 static int log_level = 0;
 
 char *usage =
-        "usage: nrm-power [options] -m [variorium measurement] [command]\n"
+        "usage: nrm-power [options] -m [variorium measurement]\n"
         "     options:\n"
         "            -m, --measurement       Variorium power measurement name. Default: ...\n"
         "            -f, --frequency         Frequency in hz to poll. Default: 10.0\n"
@@ -111,14 +111,9 @@ int main(int argc, char **argv)
 	verbose("verbose=%d; freq=%f; measurement=%s\n", log_level, freq,
 	        PowerLimit);
 
-	if (optind >= argc) {
-		error("Expected command after options.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	ctxt = nrm_ctxt_create();
 	assert(ctxt != NULL);
-	nrm_init(ctxt, "nrm-perfwrapper", 0, 0);
+	nrm_init(ctxt, "nrm-power", 0, 0);
 	verbose("NRM context initialized.\n");
 
 	scope = nrm_scope_create();
@@ -207,7 +202,7 @@ int main(int argc, char **argv)
 		// }
 
     // err = variorum_monitoring(&counter);
-    err = variorum_print_verbose_power_limit(void);
+    err = variorum_print_verbose_power_limit();
     assert(err == 0);
 
 		// nrm_send_progress(ctxt, counter, scope);
