@@ -38,9 +38,9 @@ static struct nrm_scope *scope;
 static int log_level = 0;
 
 char *usage =
-        "usage: nrm-power [options] -e [papi event] [command]\n"
+        "usage: nrm-power [options] -m [variorium measurement] [command]\n"
         "     options:\n"
-        "            -e, --event             PAPI preset event name. Default: PAPI_TOT_INS\n"
+        "            -m, --measurement       Variorium power measurement name. Default: ...\n"
         "            -f, --frequency         Frequency in hz to poll. Default: 10.0\n"
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
@@ -73,11 +73,11 @@ int main(int argc, char **argv)
 		        {"verbose", no_argument, &log_level, 1},
 		        {"frequency", optional_argument, 0, 'f'},
 		        {"help", no_argument, 0, 'h'},
-		        {"event", required_argument, 0, 'e'},
+		        {"measurement", required_argument, 0, 'm'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "+vf:e:h", long_options,
+		c = getopt_long(argc, argv, "+vf:m:h", long_options,
 		                &option_index);
 
 		if (c == -1)
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 				exit(EXIT_FAILURE);
 			}
 			break;
-		case 'e':
+		case 'm':
 			strcpy(PowerLimit, optarg);
 			break;
 		case 'h':
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	verbose("verbose=%d; freq=%f; event=%s\n", log_level, freq,
+	verbose("verbose=%d; freq=%f; measurement=%s\n", log_level, freq,
 	        PowerLimit);
 
 	if (optind >= argc) {
