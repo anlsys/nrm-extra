@@ -208,6 +208,8 @@ int main(int argc, char **argv)
 
 	/* launch? command, sample counters */
 	unsigned long long counter;
+  long long before_time,after_time;
+  double elapsed_time;
 
   values=calloc(num_events,sizeof(long long));
   if (values==NULL){
@@ -229,18 +231,35 @@ int main(int argc, char **argv)
       exit(EXIT_FAILURE);
   	}
 
+    before_time=PAPI_get_real_nsec();
+
 		do {
 			err = nanosleep(&req, &rem);
 			req = rem;
 		} while (err == -1 && errno == EINTR);
 
+    after_time=PAPI_get_real_nsec();
     err = PAPI_stop(EventSet, values);
     if (err != PAPI_OK ){
   		error("PAPI stop error: %s\n", PAPI_strerror(err));
       exit(EXIT_FAILURE);
 		}
 
-    // calculate total watts across values, set to counter
+    elapsed_time=( ( double )( after_time-before_time ) )/1.0e9;
+
+    // calculate total watts across values, set to counter. but for now...
+    // from powercap_basic.c as usual, in PAPI
+    printf( "scaled energy measurements:\n" );
+    for( i=0; i<num_events; i++ ) {
+        if ( strstr( event_names[i],"ENERGY_UJ" ) ) {
+            if ( data_type[i] == PAPI_DATATYPE_UINT64 ) {
+                printf( "%-45s%-20s%4.6f J (Average Power %.1fW)\n",
+                        event_names[i], event_descrs[i],
+                        ( double )values[i]/1.0e6,
+                        ( ( double )values[i]/1.0e6 )/elapsed_time );
+            }
+        }
+    }
 
     nrm_send_progress(ctxt, counter, scope);
 
