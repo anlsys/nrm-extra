@@ -111,7 +111,7 @@ int main(int argc, char **argv)
     }
   }
 
-  verbose("verbose=%d; freq=%f; measurement=%s\n", log_level, freq);
+  verbose("verbose=%d; freq=%f;", log_level, freq);
 
   ctxt = nrm_ctxt_create();
   assert(ctxt != NULL);
@@ -206,22 +206,22 @@ int main(int argc, char **argv)
   }
 
   // temporary printing of detected papi info
-  verbose("detected PAPI events:\n")
-  int length = sizeof(event_names) / sizeof(event_names[0]);
+  verbose("detected PAPI events:\n");
+  int elength = sizeof(event_names) / sizeof(event_names[0]);
   int i;
-  for (i=0; i<length; i++){
+  for (i=0; i<elength; i++){
     verbose("%s\n", event_names[i]);
   }
 
-  verbose("detected PAPI descriptions:\n")
-  int length = sizeof(event_descrs) / sizeof(event_descrs[0]);
-  for (i=0; i<length; i++){
+  verbose("detected PAPI descriptions:\n");
+  int dlength = sizeof(event_descrs) / sizeof(event_descrs[0]);
+  for (i=0; i<dlength; i++){
     verbose("%s\n", event_descrs[i]);
   }
 
-  verbose("detected PAPI units:\n")
-  int length = sizeof(units) / sizeof(units[0]);
-  for (i=0; i<length; i++){
+  verbose("detected PAPI units:\n");
+  int ulength = sizeof(units) / sizeof(units[0]);
+  for (i=0; i<ulength; i++){
     verbose("%s\n", units[i]);
   }
 
@@ -258,11 +258,6 @@ int main(int argc, char **argv)
     } while (err == -1 && errno == EINTR);
 
     after_time=PAPI_get_real_nsec();
-    err = PAPI_stop(EventSet, values);
-    if (err != PAPI_OK ){
-      error("PAPI stop error: %s\n", PAPI_strerror(err));
-      exit(EXIT_FAILURE);
-    }
 
     elapsed_time=( ( double )( after_time-before_time ) )/1.0e9;
 
@@ -281,9 +276,25 @@ int main(int argc, char **argv)
         }
     }
 
+    err = PAPI_reset(EventSet);
+    if (err != PAPI_OK ){
+      error("PAPI reset error: %s\n", PAPI_strerror(err));
+      exit(EXIT_FAILURE);
+    }
+    verbose("PAPI reset.\n");
+
     nrm_send_progress(ctxt, counter, scope);
+    verbose("NRM progress sent.\n");
 
   } while (1);
+
+  err = PAPI_stop(EventSet, values);
+  if (err != PAPI_OK ){
+    error("PAPI stop error: %s\n", PAPI_strerror(err));
+    exit(EXIT_FAILURE);
+  }
+
+  verbose("PAPI stopped.\n");
   verbose("Finalizing PAPI-event read/send to NRM.\n");
 
   /* final send here */
