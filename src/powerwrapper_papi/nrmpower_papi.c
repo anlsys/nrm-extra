@@ -66,7 +66,6 @@ int main(int argc, char **argv)
   int c, err;
   int num_events=0;
   double freq = 10;
-  long long *values;
   const PAPI_component_info_t *cmpinfo = NULL;
   PAPI_event_info_t evinfo;
   char event_names[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
@@ -229,12 +228,7 @@ int main(int argc, char **argv)
   unsigned long long counter;
   long long before_time,after_time;
   double elapsed_time;
-
-  values=calloc(num_events,sizeof(long long));
-  if (values==NULL){
-      error("No memory?!\n");
-      exit(EXIT_FAILURE);
-  }
+  long long *values;
 
   err = PAPI_start(EventSet);
   if (err != PAPI_OK) {
@@ -244,6 +238,12 @@ int main(int argc, char **argv)
   verbose("PAPI started.\n");
 
   do {
+
+    values=calloc(num_events,sizeof(long long));
+    if (values==NULL){
+        error("No memory?!\n");
+        exit(EXIT_FAILURE);
+    }
 
     before_time=PAPI_get_real_nsec();
 
@@ -284,8 +284,10 @@ int main(int argc, char **argv)
         }
     }
 
-    nrm_send_progress(ctxt, counter, scope);
-    verbose("NRM progress sent.\n");
+    // nrm_send_progress(ctxt, counter, scope);
+    // verbose("NRM progress sent.\n");
+
+    free(values);
 
   } while (1);
 
