@@ -230,13 +230,6 @@ int main(int argc, char **argv)
   double elapsed_time;
   long long *values;
 
-  err = PAPI_start(EventSet);
-  if (err != PAPI_OK) {
-    error("PAPI start error: %s\n", PAPI_strerror(err));
-    exit(EXIT_FAILURE);
-  }
-  verbose("PAPI started.\n");
-
   do {
 
     // allocate "values" memory space...
@@ -248,6 +241,13 @@ int main(int argc, char **argv)
     verbose("values memory allocated.\n");
 
     before_time=PAPI_get_real_nsec();
+
+    err = PAPI_start(EventSet);
+    if (err != PAPI_OK) {
+      error("PAPI start error: %s\n", PAPI_strerror(err));
+      exit(EXIT_FAILURE);
+    }
+    verbose("PAPI started.\n");
 
     /* sleep for a frequency */
     double sleeptime = 1 / freq;
@@ -264,13 +264,14 @@ int main(int argc, char **argv)
 
     elapsed_time=( ( double )( after_time-before_time ) )/1.0e9;
 
-    // read EventSet measurements into "values"...
-    err = PAPI_read(EventSet, values);
+    // Stop and read EventSet measurements into "values"...
+    err = PAPI_stop(EventSet, values);
     if (err != PAPI_OK ){
-      error("PAPI read error: %s\n", PAPI_strerror(err));
+      error("PAPI stop error: %s\n", PAPI_strerror(err));
       exit(EXIT_FAILURE);
     }
-    verbose("PAPI read EventSet into values.\n");
+
+    verbose("PAPI stopped and read EventSet into values.\n");
 
     // calculate total watts across values, set to counter. but for now...
     // from powercap_basic.c as usual, in PAPI
@@ -303,12 +304,6 @@ int main(int argc, char **argv)
     free(values);
 
   } while (1);
-
-  err = PAPI_stop(EventSet, values);
-  if (err != PAPI_OK ){
-    error("PAPI stop error: %s\n", PAPI_strerror(err));
-    exit(EXIT_FAILURE);
-  }
 
   verbose("PAPI stopped.\n");
   verbose("Finalizing PAPI-event read/send to NRM.\n");
