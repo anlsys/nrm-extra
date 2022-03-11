@@ -29,8 +29,7 @@
 #include <unistd.h>
 
 #include <nrm.h>
-#include <jansson.h>
-#include <variorum.h>
+#include <papi.h>
 
 static struct nrm_context *ctxt;
 static struct nrm_scope *scope;
@@ -47,13 +46,13 @@ char *usage =
 void logging(
         int level, const char *file, unsigned int line, const char *fmt, ...)
 {
-	if (level <= log_level) {
-		fprintf(stderr, "%s:\t%u:\t", file, line);
-		va_list ap;
-		va_start(ap, fmt);
-		vfprintf(stderr, fmt, ap);
-		va_end(ap);
-	}
+  if (level <= log_level) {
+    fprintf(stderr, "%s:\t%u:\t", file, line);
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+  }
 }
 
 #define normal(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
@@ -64,9 +63,9 @@ void logging(
 
 int main(int argc, char **argv)
 {
-	int c, err;
+  int c, err;
   int num_events=0;
-	double freq = 10;
+  double freq = 10;
   long long *values;
   const PAPI_component_info_t *cmpinfo = NULL;
   PAPI_event_info_t evinfo;
@@ -76,67 +75,67 @@ int main(int argc, char **argv)
   int data_type[MAX_powercap_EVENTS];
 
 
-	while (1) {
-		static struct option long_options[] = {
-		        {"verbose", no_argument, &log_level, 1},
-		        {"frequency", optional_argument, 0, 'f'},
-		        {"help", no_argument, 0, 'h'},
-		        {0, 0, 0, 0}};
+  while (1) {
+    static struct option long_options[] = {
+            {"verbose", no_argument, &log_level, 1},
+            {"frequency", optional_argument, 0, 'f'},
+            {"help", no_argument, 0, 'h'},
+            {0, 0, 0, 0}};
 
-		int option_index = 0;
-		c = getopt_long(argc, argv, "+vf:m:h", long_options,
-		                &option_index);
+    int option_index = 0;
+    c = getopt_long(argc, argv, "+vf:m:h", long_options,
+                    &option_index);
 
-		if (c == -1)
-			break;
-		switch (c) {
-		case 0:
-			break;
-		case 'f':
-			errno = 0;
-			freq = strtod(optarg, NULL);
-			if (errno != 0 || freq == 0) {
-				error("Error during conversion to double: %s\n",
-				      strerror(errno));
-				exit(EXIT_FAILURE);
-			}
-			break;
-		case 'h':
-			fprintf(stderr, "%s", usage);
-			exit(EXIT_SUCCESS);
-		case '?':
-		default:
-			error("Wrong option argument\n");
-			error("%s", usage);
-			exit(EXIT_FAILURE);
-		}
-	}
+    if (c == -1)
+      break;
+    switch (c) {
+    case 0:
+      break;
+    case 'f':
+      errno = 0;
+      freq = strtod(optarg, NULL);
+      if (errno != 0 || freq == 0) {
+        error("Error during conversion to double: %s\n",
+              strerror(errno));
+        exit(EXIT_FAILURE);
+      }
+      break;
+    case 'h':
+      fprintf(stderr, "%s", usage);
+      exit(EXIT_SUCCESS);
+    case '?':
+    default:
+      error("Wrong option argument\n");
+      error("%s", usage);
+      exit(EXIT_FAILURE);
+    }
+  }
 
-	verbose("verbose=%d; freq=%f; measurement=%s\n", log_level, freq);
+  verbose("verbose=%d; freq=%f; measurement=%s\n", log_level, freq);
 
-	ctxt = nrm_ctxt_create();
-	assert(ctxt != NULL);
-	nrm_init(ctxt, "nrm-power", 0, 0);
-	verbose("NRM context initialized.\n");
+  ctxt = nrm_ctxt_create();
+  assert(ctxt != NULL);
+  nrm_init(ctxt, "nrm-power", 0, 0);
+  verbose("NRM context initialized.\n");
 
-	scope = nrm_scope_create();
-	nrm_scope_threadshared(scope);
-	verbose("NRM scope initialized.\n");
+  scope = nrm_scope_create();
+  nrm_scope_threadshared(scope);
+  verbose("NRM scope initialized.\n");
 
-	// initialize PAPI
-	int papi_retval;
-	papi_retval = PAPI_library_init(PAPI_VER_CURRENT);
+  // initialize PAPI
+  int papi_retval;
+  papi_retval = PAPI_library_init(PAPI_VER_CURRENT);
 
-	if (papi_retval != PAPI_VER_CURRENT) {
-		error("PAPI library init error: %s\n",
-		      PAPI_strerror(papi_retval));
-		exit(EXIT_FAILURE);
-	}
+  if (papi_retval != PAPI_VER_CURRENT) {
+    error("PAPI library init error: %s\n",
+          PAPI_strerror(papi_retval));
+    exit(EXIT_FAILURE);
+  }
 
-	verbose("PAPI initialized.\n");
+  verbose("PAPI initialized.\n");
 
-	/* setup PAPI interface */
-	int cid, powercap_cid=-1, numcmp, code;
+  /* setup PAPI interface */
+  int cid, powercap_cid=-1, numcmp, code;
   int EventSet = PAPI_NULL;
 
   /* detecting PAPI components, cmp associated with powercap */
@@ -168,14 +167,13 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-	}
-	err = PAPI_create_eventset(&EventSet);
-	if (err != PAPI_OK) {
-		error("PAPI eventset creation error: %s\n", PAPI_strerror(err));
+  err = PAPI_create_eventset(&EventSet);
+  if (err != PAPI_OK) {
+    error("PAPI eventset creation error: %s\n", PAPI_strerror(err));
     exit(EXIT_FAILURE);
-	}
+  }
 
-	verbose("PAPI EventSet created");
+  verbose("PAPI EventSet created");
 
   code = PAPI_NATIVE_MASK;
   papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_FIRST, powercap_cid);
@@ -206,8 +204,8 @@ int main(int argc, char **argv)
       papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
 
-	/* launch? command, sample counters */
-	unsigned long long counter;
+  /* launch? command, sample counters */
+  unsigned long long counter;
   long long before_time,after_time;
   double elapsed_time;
 
@@ -217,33 +215,33 @@ int main(int argc, char **argv)
       exit(EXIT_FAILURE);
   }
 
-	do {
-		/* sleep for a frequency */
-		double sleeptime = 1 / freq;
-		struct timespec req, rem;
-		req.tv_sec = ceil(sleeptime);
-		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
-		/* deal with signal interrupts */
+  do {
+    /* sleep for a frequency */
+    double sleeptime = 1 / freq;
+    struct timespec req, rem;
+    req.tv_sec = ceil(sleeptime);
+    req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
+    /* deal with signal interrupts */
 
-  	err = PAPI_start(EventSet);
-  	if (err != PAPI_OK) {
-  		error("PAPI start error: %s\n", PAPI_strerror(err));
+    err = PAPI_start(EventSet);
+    if (err != PAPI_OK) {
+      error("PAPI start error: %s\n", PAPI_strerror(err));
       exit(EXIT_FAILURE);
-  	}
+    }
 
     before_time=PAPI_get_real_nsec();
 
-		do {
-			err = nanosleep(&req, &rem);
-			req = rem;
-		} while (err == -1 && errno == EINTR);
+    do {
+      err = nanosleep(&req, &rem);
+      req = rem;
+    } while (err == -1 && errno == EINTR);
 
     after_time=PAPI_get_real_nsec();
     err = PAPI_stop(EventSet, values);
     if (err != PAPI_OK ){
-  		error("PAPI stop error: %s\n", PAPI_strerror(err));
+      error("PAPI stop error: %s\n", PAPI_strerror(err));
       exit(EXIT_FAILURE);
-		}
+    }
 
     elapsed_time=( ( double )( after_time-before_time ) )/1.0e9;
 
@@ -263,17 +261,17 @@ int main(int argc, char **argv)
 
     nrm_send_progress(ctxt, counter, scope);
 
-	} while (1);
-	verbose("Finalizing PAPI-event read/send to NRM.\n");
+  } while (1);
+  verbose("Finalizing PAPI-event read/send to NRM.\n");
 
-	/* final send here */
-	// PAPI_stop(EventSet, &counter);
-	nrm_send_progress(ctxt, counter, scope);
+  /* final send here */
+  // PAPI_stop(EventSet, &counter);
+  nrm_send_progress(ctxt, counter, scope);
 
-	verbose("Finalizing NRM context. Exiting.\n");
-	/* finalize program */
-	nrm_fini(ctxt);
-	nrm_scope_delete(scope);
-	nrm_ctxt_delete(ctxt);
-	exit(EXIT_SUCCESS);
+  verbose("Finalizing NRM context. Exiting.\n");
+  /* finalize program */
+  nrm_fini(ctxt);
+  nrm_scope_delete(scope);
+  nrm_ctxt_delete(ctxt);
+  exit(EXIT_SUCCESS);
 }
