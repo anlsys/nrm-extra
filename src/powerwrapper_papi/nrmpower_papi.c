@@ -74,7 +74,7 @@ int main(int argc, char **argv)
   char units[MAX_powercap_EVENTS][PAPI_MIN_STR_LEN];
   int data_type[MAX_powercap_EVENTS];
 
-
+  // TODO: fix "-v" not being parsed as verbose
   while (1) {
     static struct option long_options[] = {
             {"verbose", no_argument, &log_level, 1},
@@ -154,6 +154,7 @@ int main(int argc, char **argv)
                 cmpinfo->disabled_reason);
         exit(EXIT_FAILURE);
       }
+      break;
     }
   }
 
@@ -173,7 +174,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  verbose("PAPI EventSet created");
+  verbose("PAPI EventSet created\n");
 
   code = PAPI_NATIVE_MASK;
   papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_FIRST, powercap_cid);
@@ -204,6 +205,26 @@ int main(int argc, char **argv)
       papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
 
+  // temporary printing of detected papi info
+  verbose("detected PAPI events:\n")
+  int length = sizeof(event_names) / sizeof(event_names[0]);
+  int i;
+  for (i=0; i<length; i++){
+    verbose("%s\n", event_names[i]);
+  }
+
+  verbose("detected PAPI descriptions:\n")
+  int length = sizeof(event_descrs) / sizeof(event_descrs[0]);
+  for (i=0; i<length; i++){
+    verbose("%s\n", event_descrs[i]);
+  }
+
+  verbose("detected PAPI units:\n")
+  int length = sizeof(units) / sizeof(units[0]);
+  for (i=0; i<length; i++){
+    verbose("%s\n", units[i]);
+  }
+
   /* launch? command, sample counters */
   unsigned long long counter;
   long long before_time,after_time;
@@ -211,17 +232,11 @@ int main(int argc, char **argv)
 
   values=calloc(num_events,sizeof(long long));
   if (values==NULL){
-      Error("No memory?!\n");
+      error("No memory?!\n");
       exit(EXIT_FAILURE);
   }
 
   do {
-    /* sleep for a frequency */
-    double sleeptime = 1 / freq;
-    struct timespec req, rem;
-    req.tv_sec = ceil(sleeptime);
-    req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
-    /* deal with signal interrupts */
 
     err = PAPI_start(EventSet);
     if (err != PAPI_OK) {
@@ -230,6 +245,12 @@ int main(int argc, char **argv)
     }
 
     before_time=PAPI_get_real_nsec();
+
+    /* sleep for a frequency */
+    double sleeptime = 1 / freq;
+    struct timespec req, rem;
+    req.tv_sec = ceil(sleeptime);
+    req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
 
     do {
       err = nanosleep(&req, &rem);
@@ -247,6 +268,7 @@ int main(int argc, char **argv)
 
     // calculate total watts across values, set to counter. but for now...
     // from powercap_basic.c as usual, in PAPI
+    printf("took %.3fs\n", elapsed_time);
     printf( "scaled energy measurements:\n" );
     for( i=0; i<num_events; i++ ) {
         if ( strstr( event_names[i],"ENERGY_UJ" ) ) {
