@@ -236,13 +236,14 @@ int main(int argc, char **argv)
       exit(EXIT_FAILURE);
   }
 
-  do {
+  err = PAPI_start(EventSet);
+  if (err != PAPI_OK) {
+    error("PAPI start error: %s\n", PAPI_strerror(err));
+    exit(EXIT_FAILURE);
+  }
+  verbose("PAPI started.\n");
 
-    err = PAPI_start(EventSet);
-    if (err != PAPI_OK) {
-      error("PAPI start error: %s\n", PAPI_strerror(err));
-      exit(EXIT_FAILURE);
-    }
+  do {
 
     before_time=PAPI_get_real_nsec();
 
@@ -261,6 +262,13 @@ int main(int argc, char **argv)
 
     elapsed_time=( ( double )( after_time-before_time ) )/1.0e9;
 
+    err = PAPI_read(EventSet, values);
+    if (err != PAPI_OK ){
+      error("PAPI read error: %s\n", PAPI_strerror(err));
+      exit(EXIT_FAILURE);
+    }
+    verbose("PAPI read EventSet into values.\n");
+
     // calculate total watts across values, set to counter. but for now...
     // from powercap_basic.c as usual, in PAPI
     printf("took %.3fs\n", elapsed_time);
@@ -275,13 +283,6 @@ int main(int argc, char **argv)
             }
         }
     }
-
-    err = PAPI_reset(EventSet);
-    if (err != PAPI_OK ){
-      error("PAPI reset error: %s\n", PAPI_strerror(err));
-      exit(EXIT_FAILURE);
-    }
-    verbose("PAPI reset.\n");
 
     nrm_send_progress(ctxt, counter, scope);
     verbose("NRM progress sent.\n");
