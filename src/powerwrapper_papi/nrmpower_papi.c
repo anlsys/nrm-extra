@@ -239,11 +239,13 @@ int main(int argc, char **argv)
 
   do {
 
+    // allocate "values" memory space...
     values=calloc(num_events,sizeof(long long));
     if (values==NULL){
         error("No memory?!\n");
         exit(EXIT_FAILURE);
     }
+    verbose("values memory allocated.\n");
 
     before_time=PAPI_get_real_nsec();
 
@@ -262,6 +264,7 @@ int main(int argc, char **argv)
 
     elapsed_time=( ( double )( after_time-before_time ) )/1.0e9;
 
+    // read EventSet measurements into "values"...
     err = PAPI_read(EventSet, values);
     if (err != PAPI_OK ){
       error("PAPI read error: %s\n", PAPI_strerror(err));
@@ -271,6 +274,7 @@ int main(int argc, char **argv)
 
     // calculate total watts across values, set to counter. but for now...
     // from powercap_basic.c as usual, in PAPI
+    // print "values"
     printf("took %.3fs\n", elapsed_time);
     printf( "scaled energy measurements:\n" );
     for( i=0; i<num_events; i++ ) {
@@ -287,6 +291,15 @@ int main(int argc, char **argv)
     // nrm_send_progress(ctxt, counter, scope);
     // verbose("NRM progress sent.\n");
 
+    // reset EventSet measurements?...
+    err = PAPI_reset(EventSet);
+    if (err != PAPI_OK ){
+      error("PAPI reset error: %s\n", PAPI_strerror(err));
+      exit(EXIT_FAILURE);
+    }
+    verbose("PAPI reset.\n");
+
+    // presumably free "values" to reset it...?
     free(values);
 
   } while (1);
