@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 
   /* detecting PAPI components, cmp associated with powercap */
   numcmp = PAPI_num_components();
-  for( cid=0; cid<numcmp; cid++ ) {
+  for(cid=0; cid<numcmp; cid++) {
     if ((cmpinfo = PAPI_get_component_info(cid)) == NULL){
       error("PAPI component identification failed: %s\n");
       exit(EXIT_FAILURE);
@@ -175,33 +175,45 @@ int main(int argc, char **argv)
 
   verbose("PAPI EventSet created\n");
 
+  char EventCodeStr[PAPI_MAX_STR_LEN];
   code = PAPI_NATIVE_MASK;
+
+  // Get compatible events for component
   papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_FIRST, powercap_cid);
+
   while (papi_retval == PAPI_OK) {
-      err = PAPI_event_code_to_name(code, event_names[num_events]);
+
+      // Translate all compatible events to strings
+      err = PAPI_event_code_to_name(code, EventCodeStr);
       if (err != PAPI_OK) {
         error("PAPI translation error: %s\n", PAPI_strerror(err));
         exit(EXIT_FAILURE);
       }
 
-      err = PAPI_get_event_info( code,&evinfo );
-      if (err != PAPI_OK){
-        error("PAPI event info obtain error: %s\n", PAPI_strerror(err));
-        exit(EXIT_FAILURE);
+      // Append to event_names, get descriptions, only if ENERGY_UN in name
+      if (strstr(EventCodeStr,"ENERGY_UJ")) {
+
+          event_names[num_events] = EventCodeStr;
+
+          err = PAPI_get_event_info(code,&evinfo);
+          if (err != PAPI_OK){
+            error("PAPI event info obtain error: %s\n", PAPI_strerror(err));
+            exit(EXIT_FAILURE);
+          }
+
+          strncpy(event_descrs[num_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
+          strncpy(units[num_events],evinfo.units,sizeof(units[0])-1);
+          // buffer must be null terminated to safely use strstr operation on it below
+          units[num_events][sizeof(units[0] )-1] = '\0';
+          data_type[num_events] = evinfo.data_type;
+          err = PAPI_add_event(EventSet,code);
+
+          if (err != PAPI_OK)
+              break; /* We've hit an event limit */
+          num_events++;
+
+          papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
       }
-
-      strncpy(event_descrs[num_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
-      strncpy( units[num_events],evinfo.units,sizeof(units[0])-1);
-      // buffer must be null terminated to safely use strstr operation on it below
-      units[num_events][sizeof( units[0] )-1] = '\0';
-      data_type[num_events] = evinfo.data_type;
-      err = PAPI_add_event( EventSet, code );
-
-      if (err != PAPI_OK)
-          break; /* We've hit an event limit */
-      num_events++;
-
-      papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
 
   // temporary printing of detected papi info
@@ -262,7 +274,7 @@ int main(int argc, char **argv)
 
     after_time=PAPI_get_real_nsec();
 
-    elapsed_time=( ( double )( after_time-before_time ) )/1.0e9;
+    elapsed_time=((double)(after_time-before_time))/1.0e9;
 
     // Stop and read EventSet measurements into "values"...
     err = PAPI_stop(EventSet, values);
