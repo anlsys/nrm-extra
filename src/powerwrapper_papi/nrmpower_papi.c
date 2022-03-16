@@ -59,7 +59,7 @@ void logging(
 #define verbose(...) logging(1, __FILE__, __LINE__, __VA_ARGS__)
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
-#define MAX_powercap_EVENTS 64
+#define MAX_powercap_EVENTS 16
 
 int main(int argc, char **argv)
 {
@@ -190,10 +190,8 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
       }
 
-      // Append to event_names, get descriptions, only if ENERGY_UN in name
+      // Append to event_names, get descriptions, only if ENERGY_UJ in name
       if (strstr(EventCodeStr,"ENERGY_UJ")) {
-
-          event_names[num_events] = EventCodeStr;
 
           err = PAPI_get_event_info(code,&evinfo);
           if (err != PAPI_OK){
@@ -201,6 +199,7 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
           }
 
+          strncpy(event_names[num_events], EventCodeStr, sizeof(event_names[0])-1);
           strncpy(event_descrs[num_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
           strncpy(units[num_events],evinfo.units,sizeof(units[0])-1);
           // buffer must be null terminated to safely use strstr operation on it below
@@ -211,9 +210,8 @@ int main(int argc, char **argv)
           if (err != PAPI_OK)
               break; /* We've hit an event limit */
           num_events++;
-
-          papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
       }
+      papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
 
   // temporary printing of detected papi info
