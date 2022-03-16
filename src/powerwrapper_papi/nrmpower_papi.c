@@ -73,9 +73,6 @@ int main(int argc, char **argv)
   char units[MAX_powercap_EVENTS][PAPI_MIN_STR_LEN];
   int data_type[MAX_powercap_EVENTS];
 
-  nrm_scope_t scope;
-  nrm_scope_t nrm_scopes[MAX_powercap_EVENTS][sizeof(nrm_scope_t)];
-
   ctxt = nrm_ctxt_create();
   assert(ctxt != NULL);
   nrm_init(ctxt, "nrm-power", 0, 0);
@@ -234,6 +231,9 @@ int main(int argc, char **argv)
   for (i=0; i<ulength; i++){
     verbose("%s\n", units[i]);
   }
+
+  scope = nrm_scope_create();
+  nrm_scope_t *nrm_scopes[MAX_powercap_EVENTS][sizeof(scope)];
 
   // Create an NRM scope for each chosen PAPI event
   for (i=0; i<elength; i++){
