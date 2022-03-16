@@ -73,6 +73,14 @@ int main(int argc, char **argv)
   char units[MAX_powercap_EVENTS][PAPI_MIN_STR_LEN];
   int data_type[MAX_powercap_EVENTS];
 
+  nrm_scope_t scope;
+  nrm_scope_t nrm_scopes[MAX_powercap_EVENTS][sizeof(nrm_scope_t)];
+
+  ctxt = nrm_ctxt_create();
+  assert(ctxt != NULL);
+  nrm_init(ctxt, "nrm-power", 0, 0);
+  verbose("NRM context initialized.\n");
+
   // TODO: fix "-v" not being parsed as verbose
   while (1) {
     static struct option long_options[] = {
@@ -111,15 +119,6 @@ int main(int argc, char **argv)
   }
 
   verbose("verbose=%d; freq=%f;", log_level, freq);
-
-  ctxt = nrm_ctxt_create();
-  assert(ctxt != NULL);
-  nrm_init(ctxt, "nrm-power", 0, 0);
-  verbose("NRM context initialized.\n");
-
-  scope = nrm_scope_create();
-  nrm_scope_threadshared(scope);
-  verbose("NRM scope initialized.\n");
 
   // initialize PAPI
   int papi_retval;
@@ -222,17 +221,27 @@ int main(int argc, char **argv)
     verbose("%s\n", event_names[i]);
   }
 
+  // all blank on chimera for some reason
   verbose("detected PAPI descriptions:\n");
   int dlength = sizeof(event_descrs) / sizeof(event_descrs[0]);
   for (i=0; i<dlength; i++){
     verbose("%s\n", event_descrs[i]);
   }
 
+  // also all blank on chimera for some reason
   verbose("detected PAPI units:\n");
   int ulength = sizeof(units) / sizeof(units[0]);
   for (i=0; i<ulength; i++){
     verbose("%s\n", units[i]);
   }
+
+  // Create an NRM scope for each chosen PAPI event
+  for (i=0; i<elength; i++){
+    scope = nrm_scope_create();
+    nrm_scope_threadshared(scope);
+    memcpy(nrm_scopes[i], &scope, sizeof(scope));
+  }
+  verbose("NRM scopes initialized.\n");
 
   /* launch? command, sample counters */
   unsigned long long counter;
