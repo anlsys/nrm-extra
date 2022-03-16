@@ -232,14 +232,13 @@ int main(int argc, char **argv)
     verbose("%s\n", units[i]);
   }
 
-  scope = nrm_scope_create();
-  nrm_scope_t *nrm_scopes[MAX_powercap_EVENTS][sizeof(scope)];
+  nrm_scope_t *nrm_scopes[MAX_powercap_EVENTS];
 
   // Create an NRM scope for each chosen PAPI event
   for (i=0; i<elength; i++){
     scope = nrm_scope_create();
     nrm_scope_threadshared(scope);
-    memcpy(nrm_scopes[i], &scope, sizeof(scope));
+    nrm_scopes[i] = scope;
   }
   verbose("NRM scopes initialized.\n");
 
