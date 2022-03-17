@@ -64,7 +64,7 @@ void logging(
 
 #define MAX_powercap_EVENTS 16
 
-// callback on interrupt?
+// handler for interrupt?
 void interrupt(int signum) {
   verbose("Interrupt caught. Exiting loop.\n");
   stop = 1;
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
   char units[MAX_powercap_EVENTS][PAPI_MIN_STR_LEN];
   int data_type[MAX_powercap_EVENTS];
 
-  // register callback for interrupt
+  // register callback handler for interrupt
   signal(SIGINT, interrupt);
 
   ctxt = nrm_ctxt_create();
@@ -260,6 +260,7 @@ int main(int argc, char **argv)
   double elapsed_time, watts_value;
 
   // loop until ctrl+c interrupt?
+  stop = 0;
   do {
 
     // allocate "values" memory space...
@@ -335,7 +336,6 @@ int main(int argc, char **argv)
     free(values);
 
   } while (!stop);
-
 
   /* final send here */
   for(i=0; i<num_matching_events; i++){
