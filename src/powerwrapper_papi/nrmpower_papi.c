@@ -27,14 +27,23 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <nrm.h>
 #include <papi.h>
 
+static int log_level = 0;
+
 static struct nrm_context *ctxt;
 static struct nrm_scope *scope;
 
-static int log_level = 0;
+volatile sig_atomic_t stop;
+
+// callback on interrupt?
+void interrupt(int signum) {
+  verbose("Interrupt caught. Exiting loop.\n");
+  stop = 1;
+}
 
 char *usage =
         "usage: nrm-power [options] \n"
@@ -64,7 +73,7 @@ void logging(
 int main(int argc, char **argv)
 {
   int c, err;
-  int num_events=0;
+  int num_matching_events=0;
   double freq = 10;
   const PAPI_component_info_t *cmpinfo = NULL;
   PAPI_event_info_t evinfo;
@@ -72,6 +81,9 @@ int main(int argc, char **argv)
   char event_descrs[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
   char units[MAX_powercap_EVENTS][PAPI_MIN_STR_LEN];
   int data_type[MAX_powercap_EVENTS];
+
+  // register callback for interrupt
+  signal(SIGINT, interrupt);
 
   ctxt = nrm_ctxt_create();
   assert(ctxt != NULL);
@@ -186,7 +198,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
       }
 
-      // Append to event_names, get descriptions, only if ENERGY_UJ in name
+      // if ENERGY_UJ in event name, append to event_names, get info
       if (strstr(EventCodeStr,"ENERGY_UJ")) {
 
           err = PAPI_get_event_info(code,&evinfo);
@@ -195,19 +207,19 @@ int main(int argc, char **argv)
             exit(EXIT_FAILURE);
           }
 
-          strncpy(event_names[num_events], EventCodeStr, sizeof(event_names[0])-1);
-          strncpy(event_descrs[num_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
-          strncpy(units[num_events],evinfo.units,sizeof(units[0])-1);
+          strncpy(event_names[num_matching_events], EventCodeStr, sizeof(event_names[0])-1);
+          strncpy(event_descrs[num_matching_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
+          strncpy(units[num_matching_events],evinfo.units,sizeof(units[0])-1);
           // buffer must be null terminated to safely use strstr operation on it below
-          units[num_events][sizeof(units[0] )-1] = '\0';
-          data_type[num_events] = evinfo.data_type;
+          units[num_matching_events][sizeof(units[0] )-1] = '\0';
+          data_type[num_matching_events] = evinfo.data_type;
           err = PAPI_add_event(EventSet,code);
 
           if (err != PAPI_OK)
               break; /* We've hit an event limit */
-          num_events++;
+          num_matching_events++;
       }
-      papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
+      papi_retval = PAPI_enum_cmp_event(&code, PAPI_Enum_matching_events, powercap_cid);
   }
 
   // temporary printing of detected papi info
@@ -218,24 +230,24 @@ int main(int argc, char **argv)
     verbose("%s\n", event_names[i]);
   }
 
-  // all blank on chimera for some reason
+  // all blank for powercap on chimera for some reason
   verbose("detected PAPI descriptions:\n");
   int dlength = sizeof(event_descrs) / sizeof(event_descrs[0]);
   for (i=0; i<dlength; i++){
     verbose("%s\n", event_descrs[i]);
   }
 
-  // also all blank on chimera for some reason
+  // also all blank for powercap on chimera for some reason
   verbose("detected PAPI units:\n");
   int ulength = sizeof(units) / sizeof(units[0]);
   for (i=0; i<ulength; i++){
     verbose("%s\n", units[i]);
   }
 
-  nrm_scope_t *nrm_scopes[MAX_powercap_EVENTS];
+  nrm_scope_t *nrm_scopes[num_matching_events];
 
   // Create an NRM scope for each chosen PAPI event
-  for (i=0; i<elength; i++){
+  for (i=0; i<num_matching_events; i++){
     scope = nrm_scope_create();
     nrm_scope_threadshared(scope);
     nrm_scopes[i] = scope;
@@ -244,14 +256,14 @@ int main(int argc, char **argv)
 
   /* launch? command, sample counters */
   unsigned long long counter;
-  long long before_time,after_time;
-  double elapsed_time;
-  long long *values;
+  long long before_time, after_time, *values;
+  double elapsed_time watts_value;
 
+  // loop until ctrl+c interrupt?
   do {
 
     // allocate "values" memory space...
-    values=calloc(num_events,sizeof(long long));
+    values=calloc(num_matching_events,sizeof(long long));
     if (values==NULL){
         error("No memory?!\n");
         exit(EXIT_FAILURE);
@@ -291,24 +303,25 @@ int main(int argc, char **argv)
 
     verbose("PAPI stopped and read EventSet into values.\n");
 
-    // calculate total watts across values, set to counter. but for now...
     // from powercap_basic.c as usual, in PAPI
     // print "values"
-    printf("took %.3fs\n", elapsed_time);
-    printf( "scaled energy measurements:\n" );
-    for( i=0; i<num_events; i++ ) {
-        if ( strstr( event_names[i],"ENERGY_UJ" ) ) {
-            if ( data_type[i] == PAPI_DATATYPE_UINT64 ) {
-                printf( "%-45s%-20s%4.6f J (Average Power %.1fW)\n",
-                        event_names[i], event_descrs[i],
-                        ( double )values[i]/1.0e6,
-                        ( ( double )values[i]/1.0e6 )/elapsed_time );
-            }
-        }
+    verbose("took %.3fs\n", elapsed_time);
+    verbose( "scaled energy measurements:\n" );
+    for( i=0; i<num_matching_events; i++ ) {
+      if ( data_type[i] == PAPI_DATATYPE_UINT64 ) {
+          verbose( "%-45s%-20s%4.6f J (Average Power %.1fW)\n",
+                  event_names[i], event_descrs[i],
+                  ( double )values[i]/1.0e6,
+                  ( ( double )values[i]/1.0e6 )/elapsed_time );
+      }
     }
 
-    // nrm_send_progress(ctxt, counter, scope);
-    // verbose("NRM progress sent.\n");
+    // for each event, send progress using matching scope (watts, right....?)
+    for(i=0; i<num_matching_events; i++){
+      watts_value = (double)values[i]/1.0e6)/elapsed_time;
+      nrm_send_progress(ctxt, watts_value, nrm_scopes[i]);
+    }
+    verbose("NRM progress sent.\n");
 
     // reset EventSet measurements?...
     err = PAPI_reset(EventSet);
@@ -321,19 +334,27 @@ int main(int argc, char **argv)
     // presumably free "values" to reset it...?
     free(values);
 
-  } while (1);
+  } while (!stop);
 
-  verbose("PAPI stopped.\n");
-  verbose("Finalizing PAPI-event read/send to NRM.\n");
 
   /* final send here */
-  // PAPI_stop(EventSet, &counter);
-  nrm_send_progress(ctxt, counter, scope);
+  for(i=0; i<num_matching_events; i++){
+    watts_value = (double)values[i]/1.0e6)/elapsed_time;
+    nrm_send_progress(ctxt, watts_value, nrm_scopes[i]);
+  }
+  verbose("Finalized PAPI-event read/send to NRM.\n");
 
-  verbose("Finalizing NRM context. Exiting.\n");
   /* finalize program */
   nrm_fini(ctxt);
-  nrm_scope_delete(scope);
+  verbose("Finalized NRM context.\n");
+
+  for(i=0; i<num_matching_events; i++){
+    nrm_scope_delete(scopes[i]);
+  }
+  verbose("NRM scopes deleted.\n");
+
   nrm_ctxt_delete(ctxt);
+  verbose("NRM context deleted. Exiting.\n");
+
   exit(EXIT_SUCCESS);
 }
