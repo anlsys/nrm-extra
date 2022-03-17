@@ -39,12 +39,6 @@ static struct nrm_scope *scope;
 
 volatile sig_atomic_t stop;
 
-// callback on interrupt?
-void interrupt(int signum) {
-  verbose("Interrupt caught. Exiting loop.\n");
-  stop = 1;
-}
-
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
@@ -69,6 +63,12 @@ void logging(
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
 #define MAX_powercap_EVENTS 16
+
+// callback on interrupt?
+void interrupt(int signum) {
+  verbose("Interrupt caught. Exiting loop.\n");
+  stop = 1;
+}
 
 int main(int argc, char **argv)
 {
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
               break; /* We've hit an event limit */
           num_matching_events++;
       }
-      papi_retval = PAPI_enum_cmp_event(&code, PAPI_Enum_matching_events, powercap_cid);
+      papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
 
   // temporary printing of detected papi info
@@ -257,7 +257,7 @@ int main(int argc, char **argv)
   /* launch? command, sample counters */
   unsigned long long counter;
   long long before_time, after_time, *values;
-  double elapsed_time watts_value;
+  double elapsed_time, watts_value;
 
   // loop until ctrl+c interrupt?
   do {
@@ -318,7 +318,7 @@ int main(int argc, char **argv)
 
     // for each event, send progress using matching scope (watts, right....?)
     for(i=0; i<num_matching_events; i++){
-      watts_value = (double)values[i]/1.0e6)/elapsed_time;
+      watts_value = ((double)values[i]/1.0e6)/elapsed_time;
       nrm_send_progress(ctxt, watts_value, nrm_scopes[i]);
     }
     verbose("NRM progress sent.\n");
@@ -339,7 +339,7 @@ int main(int argc, char **argv)
 
   /* final send here */
   for(i=0; i<num_matching_events; i++){
-    watts_value = (double)values[i]/1.0e6)/elapsed_time;
+    watts_value = ((double)values[i]/1.0e6)/elapsed_time;
     nrm_send_progress(ctxt, watts_value, nrm_scopes[i]);
   }
   verbose("Finalized PAPI-event read/send to NRM.\n");
@@ -349,7 +349,7 @@ int main(int argc, char **argv)
   verbose("Finalized NRM context.\n");
 
   for(i=0; i<num_matching_events; i++){
-    nrm_scope_delete(scopes[i]);
+    nrm_scope_delete(nrm_scopes[i]);
   }
   verbose("NRM scopes deleted.\n");
 
