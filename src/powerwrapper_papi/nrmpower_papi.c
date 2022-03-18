@@ -62,7 +62,7 @@ void logging(
 #define verbose(...) logging(1, __FILE__, __LINE__, __VA_ARGS__)
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
-#define MAX_powercap_EVENTS 16
+#define MAX_powercap_EVENTS 32
 
 // handler for interrupt?
 void interrupt(int signum) {
@@ -77,9 +77,9 @@ int main(int argc, char **argv)
   double freq = 1;
   const PAPI_component_info_t *cmpinfo = NULL;
   PAPI_event_info_t evinfo;
-  char event_names[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
-  char event_descrs[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
-  char units[MAX_powercap_EVENTS][PAPI_MIN_STR_LEN];
+  char all_event_names[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
+  char all_event_descrs[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
+  char all_units[MAX_powercap_EVENTS][PAPI_MIN_STR_LEN];
   int data_type[MAX_powercap_EVENTS];
 
   // register callback handler for interrupt
@@ -182,23 +182,20 @@ int main(int argc, char **argv)
 
   verbose("PAPI EventSet created\n");
 
-  char EventCodeStr[PAPI_MAX_STR_LEN];
   code = PAPI_NATIVE_MASK;
 
   // Get compatible events for component
   papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_FIRST, powercap_cid);
 
   while (papi_retval == PAPI_OK) {
+      char EventCodeStr[PAPI_MAX_STR_LEN];
 
       // Translate all compatible events to strings
-      err = PAPI_event_code_to_name(code, EventCodeStr);
+      err = PAPI_event_code_to_name(code, all_event_names[num_matching_events]);
       if (err != PAPI_OK) {
         error("PAPI translation error: %s\n", PAPI_strerror(err));
         exit(EXIT_FAILURE);
       }
-
-      // if ENERGY_UJ in event name, append to event_names, get info
-      // if (strstr(EventCodeStr,"ENERGY_UJ")) {
 
       err = PAPI_get_event_info(code,&evinfo);
       if (err != PAPI_OK){
@@ -206,17 +203,18 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
       }
 
-      strncpy(event_names[num_matching_events], EventCodeStr, sizeof(event_names[0])-1);
-      strncpy(event_descrs[num_matching_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
-      strncpy(units[num_matching_events],evinfo.units,sizeof(units[0])-1);
+      strncpy(all_event_descrs[num_matching_events],evinfo.long_descr,sizeof(all_event_descrs[0])-1);
+      strncpy(all_units[num_matching_events],evinfo.all_units,sizeof(all_units[0])-1);
+
       // buffer must be null terminated to safely use strstr operation on it below
-      units[num_matching_events][sizeof(units[0] )-1] = '\0';
+      all_units[num_matching_events][sizeof(all_units[0] )-1] = '\0';
       data_type[num_matching_events] = evinfo.data_type;
       err = PAPI_add_event(EventSet,code);
-      num_matching_events++;
 
       if (err != PAPI_OK)
           break; /* We've hit an event limit */
+      num_matching_events++;
+
       // }
       papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
@@ -225,19 +223,19 @@ int main(int argc, char **argv)
   verbose("detected PAPI events:\n");
   int i;
   for (i=0; i<num_matching_events; i++){
-    verbose("%s\n", event_names[i]);
+    verbose("%s\n", all_event_names[i]);
   }
 
   // all blank for powercap on chimera for some reason
   verbose("detected PAPI descriptions:\n");
   for (i=0; i<num_matching_events; i++){
-    verbose("%s\n", event_descrs[i]);
+    verbose("%s\n", all_event_descrs[i]);
   }
 
   // also all blank for powercap on chimera for some reason
-  verbose("detected PAPI units:\n");
+  verbose("detected PAPI all_units:\n");
   for (i=0; i<num_matching_events; i++){
-    verbose("%s\n", units[i]);
+    verbose("%s\n", all_units[i]);
   }
 
   nrm_scope_t *nrm_scopes[num_matching_events];
@@ -251,7 +249,8 @@ int main(int argc, char **argv)
   verbose("NRM scopes initialized.\n");
 
   /* launch? command, sample counters */
-  long long before_time, after_time, *event_values;
+  long long before_time, after_time;
+  long long *event_values;
   double elapsed_time, watts_value;
 
   // loop until ctrl+c interrupt?
@@ -304,10 +303,10 @@ int main(int argc, char **argv)
     verbose("took %.3fs\n", elapsed_time);
     verbose( "scaled energy measurements:\n" );
     for(i=0; i<num_matching_events; i++) {
-      if ( strstr(event_names[i],"ENERGY_UJ")) {
+      if ( strstr(all_event_names[i],"ENERGY_UJ")) {
         if (data_type[i] == PAPI_DATATYPE_UINT64) {
           verbose("%-45s%-20s%4.6f J (Average Power %.1fW)\n",
-                  event_names[i], event_descrs[i],
+                  all_event_names[i], all_event_descrs[i],
                   (double)event_values[i]/1.0e6,
                   ((double)event_values[i]/1.0e6)/elapsed_time);
         }
