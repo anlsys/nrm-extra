@@ -304,11 +304,14 @@ int main(int argc, char **argv)
     verbose("took %.3fs\n", elapsed_time);
     verbose( "scaled energy measurements:\n" );
     for(i=0; i<num_matching_events; i++) {
-      verbose("%-45s%-20s%4.6f J (Average Power %.1fW)\n",
-              event_names[i], event_descrs[i],
-              (double)event_values[i]/1.0e6,
-              ((double)event_values[i]/1.0e6)/elapsed_time);
-
+      if ( strstr(event_names[i],"ENERGY_UJ")) {
+        if (data_type[i] == PAPI_DATATYPE_UINT64) {
+          verbose("%-45s%-20s%4.6f J (Average Power %.1fW)\n",
+                  event_names[i], event_descrs[i],
+                  (double)event_values[i]/1.0e6,
+                  ((double)event_values[i]/1.0e6)/elapsed_time);
+        }
+      }
     }
 
     // for each event, send progress using matching scope
