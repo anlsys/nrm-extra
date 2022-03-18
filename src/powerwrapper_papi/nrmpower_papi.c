@@ -198,26 +198,26 @@ int main(int argc, char **argv)
       }
 
       // if ENERGY_UJ in event name, append to event_names, get info
-      if (strstr(EventCodeStr,"ENERGY_UJ")) {
+      // if (strstr(EventCodeStr,"ENERGY_UJ")) {
 
-          err = PAPI_get_event_info(code,&evinfo);
-          if (err != PAPI_OK){
-            error("PAPI event info obtain error: %s\n", PAPI_strerror(err));
-            exit(EXIT_FAILURE);
-          }
-
-          strncpy(event_names[num_matching_events], EventCodeStr, sizeof(event_names[0])-1);
-          strncpy(event_descrs[num_matching_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
-          strncpy(units[num_matching_events],evinfo.units,sizeof(units[0])-1);
-          // buffer must be null terminated to safely use strstr operation on it below
-          units[num_matching_events][sizeof(units[0] )-1] = '\0';
-          data_type[num_matching_events] = evinfo.data_type;
-          err = PAPI_add_event(EventSet,code);
-          num_matching_events++;
-
-          if (err != PAPI_OK)
-              break; /* We've hit an event limit */
+      err = PAPI_get_event_info(code,&evinfo);
+      if (err != PAPI_OK){
+        error("PAPI event info obtain error: %s\n", PAPI_strerror(err));
+        exit(EXIT_FAILURE);
       }
+
+      strncpy(event_names[num_matching_events], EventCodeStr, sizeof(event_names[0])-1);
+      strncpy(event_descrs[num_matching_events],evinfo.long_descr,sizeof(event_descrs[0])-1);
+      strncpy(units[num_matching_events],evinfo.units,sizeof(units[0])-1);
+      // buffer must be null terminated to safely use strstr operation on it below
+      units[num_matching_events][sizeof(units[0] )-1] = '\0';
+      data_type[num_matching_events] = evinfo.data_type;
+      err = PAPI_add_event(EventSet,code);
+      num_matching_events++;
+
+      if (err != PAPI_OK)
+          break; /* We've hit an event limit */
+      // }
       papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
 
@@ -303,7 +303,7 @@ int main(int argc, char **argv)
     // print "event_values"
     verbose("took %.3fs\n", elapsed_time);
     verbose( "scaled energy measurements:\n" );
-    for( i=0; i<num_matching_events; i++ ) {
+    for(i=0; i<num_matching_events; i++) {
       verbose("%-45s%-20s%4.6f J (Average Power %.1fW)\n",
               event_names[i], event_descrs[i],
               (double)event_values[i]/1.0e6,
