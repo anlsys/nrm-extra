@@ -11,7 +11,8 @@
 
 #include <papi.h>
 
-#define MAX_energy_uj_EVENTS 16
+#define MAX_energy_uj_EVENTS 64
+#define ADD_ALL_EVENTS 1
 
 int main(int argc, char **argv)
 {
@@ -56,12 +57,19 @@ int main(int argc, char **argv)
       assert(PAPI_event_code_to_name(EventCode, EventName) == PAPI_OK);
       printf("code: %d, event: %s\n", EventCode, EventName);
 
-      if (strstr(EventName, "ENERGY_UJ")){
-        printf("UJ code: %d, event: %s\n", EventCode, EventName);
-        // assert(PAPI_add_named_event(EventSet, EventName) == PAPI_OK);
-        assert(PAPI_query_named_event(EventName) == PAPI_OK);
+      if (ADD_ALL_EVENTS){
         assert(PAPI_add_event(EventSet, EventCode) == PAPI_OK);
         num_uj_events++;
+      }
+      else
+      {
+        if (strstr(EventName, "ENERGY_UJ")){
+          printf("UJ code: %d, event: %s\n", EventCode, EventName);
+          // assert(PAPI_add_named_event(EventSet, EventName) == PAPI_OK);
+          assert(PAPI_query_named_event(EventName) == PAPI_OK);
+          assert(PAPI_add_event(EventSet, EventCode) == PAPI_OK);
+          num_uj_events++;
+        }
       }
 
       papi_retval = PAPI_enum_cmp_event(&EventCode, PAPI_ENUM_EVENTS, powercap_cmp_id);
