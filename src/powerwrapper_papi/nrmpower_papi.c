@@ -73,13 +73,14 @@ void interrupt(int signum) {
 
 int main(int argc, char **argv)
 {
-  int c, err;
+  int i, c, err;
   int num_cmp_events=0;
   int num_uj_events=0;
   double freq = 1;
   const PAPI_component_info_t *cmpinfo = NULL;
   PAPI_event_info_t evinfo;
-  char all_event_names[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
+  char events[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN];
+  int energy_codes[MAX_energy_uj_EVENTS];
 
   // register callback handler for interrupt
   signal(SIGINT, interrupt);
@@ -185,102 +186,49 @@ int main(int argc, char **argv)
 
   // Get compatible events for component
   papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_FIRST, powercap_cid);
+  verbose("first code: %d\n", code);
 
   while (papi_retval == PAPI_OK) {
 
       // Translate all compatible events to strings
-      err = PAPI_event_code_to_name(code, all_event_names[num_cmp_events]);
+      err = PAPI_event_code_to_name(code, events[num_cmp_events]);
       if (err != PAPI_OK) {
         error("PAPI translation error: %s\n", PAPI_strerror(err));
         exit(EXIT_FAILURE);
       }
 
-      if (strstr(all_event_names[num_cmp_events], "ENERGY_UJ")){
+      verbose("code: %d, event: %s\n", code, events[num_cmp_events]);
+
+      if (strstr(events[num_cmp_events], "ENERGY_UJ")){
+        verbose("UJ code: %d, event: %s\n", code, events[num_cmp_events]);
+        // err = PAPI_add_named_event(EventSet, events[num_cmp_events]);
+        err = PAPI_add_event(EventSet, code);
+        if (err != PAPI_OK) {
+          error("PAPI EventSet append error: %s\n", PAPI_strerror(err));
+          exit(EXIT_FAILURE);
+        }
         num_uj_events++;
       }
 
       num_cmp_events++;
-
       papi_retval = PAPI_enum_cmp_event(&code, PAPI_ENUM_EVENTS, powercap_cid);
   }
 
-  // temporary printing of detected papi info
-  verbose("detected PAPI events:\n");
-  int i;
-  for (i=0; i<num_cmp_events; i++){
-    verbose("%s\n", all_event_names[i]);
-  }
-
   verbose("NUM UJ EVENTS: %d\n", num_uj_events);
-
-  // Iterate through event_names, if ENERGY_UJ, then copy to new array, add to EventSet
-  int uj_index=0;
-  int energy_uj_event_codes[MAX_energy_uj_EVENTS];
-  char energy_uj_event_names[MAX_energy_uj_EVENTS][PAPI_MAX_STR_LEN];
-  char energy_uj_event_descrs[MAX_energy_uj_EVENTS][PAPI_MAX_STR_LEN];
-  int energy_uj_datatypes[MAX_energy_uj_EVENTS];
-  int EventCode = PAPI_NULL;
-  char EventName[PAPI_MAX_STR_LEN];
-
-  for (i=0; i<num_cmp_events; i++){
-    if (strstr(all_event_names[i], "ENERGY_UJ")){
-      verbose("%s\n", all_event_names[i]);
-      memcpy(energy_uj_event_names[uj_index], all_event_names[i], PAPI_MAX_STR_LEN);
-
-      err = PAPI_event_name_to_code(all_event_names[i], &EventCode);
-      if (err != PAPI_OK) {
-        error("PAPI translation error: %s\n", PAPI_strerror(err));
-        exit(EXIT_FAILURE);
-      }
-
-      err = PAPI_get_event_info(EventCode ,&evinfo);
-      if (err != PAPI_OK){
-        error("PAPI event info obtain error: %s\n", PAPI_strerror(err));
-        exit(EXIT_FAILURE);
-      }
-
-      strncpy(energy_uj_event_descrs[uj_index],evinfo.long_descr,sizeof(energy_uj_event_descrs[0])-1);
-      energy_uj_datatypes[uj_index] = evinfo.data_type;
-
-      uj_index++;
-
-      err = PAPI_add_event(EventSet, EventCode);
-      if (err != PAPI_OK) {
-        error("PAPI EventSet append error: %s\n", PAPI_strerror(err));
-        exit(EXIT_FAILURE);
-      }
-    }
-  }
-
-  verbose("detected ENERGY_UJ events:\n");
-  for (i=0; i<num_uj_events; i++){
-    verbose("%s\n", energy_uj_event_names[i]);
-  }
-
-  verbose("detected ENERGY_UJ descriptions:\n");
-  for (i=0; i<num_uj_events; i++){
-    verbose("%s\n", energy_uj_event_descrs[i]);
-  }
-
-  verbose("detected ENERGY_UJ units:\n");
-  for (i=0; i<num_uj_events; i++){
-    verbose("%d\n", energy_uj_datatypes[i]);
-  }
-
-  verbose("checking PAPI EventSet once again:\n");
   verbose("EventSet listed PAPI event codes:\n");
 
   int number = num_uj_events;
-  err = PAPI_list_events(EventSet, energy_uj_event_codes, &number);
+  err = PAPI_list_events(EventSet, energy_codes, &number);
   for (i=0; i<number; i++){
-    verbose("%d\n", energy_uj_event_codes[i]);
+    verbose("%d\n", energy_codes[i]);
   }
 
   verbose("EventSet listed PAPI event names:\n");
 
+  char energy_uj_event_names[MAX_energy_uj_EVENTS][PAPI_MAX_STR_LEN];
   for (i=0; i<num_uj_events; i++){
-    err = PAPI_event_code_to_name(energy_uj_event_codes[i], EventName);
-    verbose("%s\n", EventName);
+    err = PAPI_event_code_to_name(energy_codes[i], energy_uj_event_names[i]);
+    verbose("%s\n", energy_uj_event_names[i]);
   }
 
   nrm_scope_t *nrm_scopes[MAX_energy_uj_EVENTS];
@@ -300,18 +248,18 @@ int main(int argc, char **argv)
 
   event_values = calloc(num_uj_events, sizeof(long long));
 
-  err = PAPI_start(EventSet);
-  if (err != PAPI_OK) {
-    error("PAPI start error: %s\n", PAPI_strerror(err));
-    exit(EXIT_FAILURE);
-  }
-  verbose("PAPI started.\n");
-
   // loop until ctrl+c interrupt?
   stop = 0;
   do {
 
     before_time=PAPI_get_real_nsec();
+
+    err = PAPI_start(EventSet);
+    if (err != PAPI_OK) {
+      error("PAPI start error: %s\n", PAPI_strerror(err));
+      exit(EXIT_FAILURE);
+    }
+    verbose("PAPI started.\n");
 
     /* sleep for a frequency */
     double sleeptime = 1 / freq;
@@ -328,7 +276,7 @@ int main(int argc, char **argv)
     elapsed_time=((double)(after_time-before_time))/1.0e9;
 
     // Stop and read EventSet measurements into "event_values"...
-    err = PAPI_read(EventSet, event_values);
+    err = PAPI_stop(EventSet, event_values);
     if (err != PAPI_OK ){
       error("PAPI stop error: %s\n", PAPI_strerror(err));
       exit(EXIT_FAILURE);
@@ -338,8 +286,8 @@ int main(int argc, char **argv)
     verbose("scaled energy measurements:\n");
 
     for(i=0; i<num_uj_events; i++) {
-        verbose("%-45s%-20s%4.6f J (Average Power %.1fW)\n",
-                energy_uj_event_names[i], energy_uj_event_descrs[i],
+        verbose("%-45s%4.6f J (Average Power %.1fW)\n",
+                energy_uj_event_names[i],
                 (double)event_values[i]/1.0e6,
                 ((double)event_values[i]/1.0e6)/elapsed_time);
     }
@@ -350,14 +298,6 @@ int main(int argc, char **argv)
       nrm_send_progress(ctxt, watts_value, nrm_scopes[i]);
     }
     verbose("NRM progress sent.\n");
-
-    // reset EventSet measurements?...
-    err = PAPI_reset(EventSet);
-    if (err != PAPI_OK ){
-      error("PAPI reset error: %s\n", PAPI_strerror(err));
-      exit(EXIT_FAILURE);
-    }
-    verbose("PAPI EventSet reset.\n");
 
   } while (!stop);
 
