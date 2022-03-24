@@ -47,6 +47,8 @@ int main(int argc, char **argv)
   int num_cmp_events=0;
   int num_uj_events=0;
   char EventName[PAPI_MAX_STR_LEN];
+  int DataTypes[MAX_energy_uj_EVENTS];
+  PAPI_event_info_t EventInfo;
 
   papi_retval = PAPI_enum_cmp_event(&EventCode, PAPI_ENUM_FIRST, powercap_cmp_id);
   printf("first code: %d\n\n", EventCode);
@@ -56,6 +58,8 @@ int main(int argc, char **argv)
 
       assert(PAPI_event_code_to_name(EventCode, EventName) == PAPI_OK);
       printf("code: %d, event: %s\n", EventCode, EventName);
+      assert(PAPI_get_event_info(EventCode, &EventInfo) == PAPI_OK);
+      DataTypes[num_uj_events] = EventInfo.data_type;
 
       if (ADD_ALL_EVENTS){
         assert(PAPI_add_event(EventSet, EventCode) == PAPI_OK);
@@ -127,11 +131,24 @@ int main(int argc, char **argv)
 
     printf("\nscaled energy measurements:\n");
 
-    for(i=0; i<num_uj_events; i++) {
-        printf("%-45s%4.6f J (Average Power %.1fW)\n",
-                energy_uj_event_names[i],
-                (double)event_values[i]/1.0e6,
-                ((double)event_values[i]/1.0e6)/elapsed_time);
+    if (ADD_ALL_EVENTS){
+      for(i=0; i<num_uj_events; i++) {
+        if (strstr(energy_uj_event_names[i],"ENERGY_UJ")){
+          if (DataTypes[i] == PAPI_DATATYPE_UINT64){
+            printf("%-45s%4.6f J (Average Power %.1fW)\n",
+                  energy_uj_event_names[i],
+                  (double)event_values[i]/1.0e6,
+                  ((double)event_values[i]/1.0e6)/elapsed_time);
+          }
+        }
+      }
+    } else {
+      for(i=0; i<num_uj_events; i++) {
+          printf("%-45s%4.6f J (Average Power %.1fW)\n",
+                  energy_uj_event_names[i],
+                  (double)event_values[i]/1.0e6,
+                  ((double)event_values[i]/1.0e6)/elapsed_time);
+      }
     }
   } while (1);
 }
