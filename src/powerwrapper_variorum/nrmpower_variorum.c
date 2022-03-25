@@ -8,10 +8,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
-/* Filename: nrmpower.c
+/* Filename: nrmpower_papi.c
  *
- * Description: Implements middleware between variorum and the NRM
- *              downstream interface.
+ * Description: Implements middleware between powercap, measured via PAPI,
+ *               and the NRM downstream interface.
  */
 
 #define _GNU_SOURCE
@@ -20,6 +20,7 @@
 #include <getopt.h>
 #include <math.h>
 #include <sched.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,19 +30,19 @@
 #include <unistd.h>
 
 #include <nrm.h>
-#include <jansson.h>
 #include <variorum.h>
+#include <jansson.h>
+
+static int log_level = 0;
+volatile sig_atomic_t stop;
 
 static struct nrm_context *ctxt;
 static struct nrm_scope *scope;
 
-static int log_level = 0;
-
 char *usage =
-        "usage: nrm-power [options] -m [variorium measurement]\n"
+        "usage: nrm-power [options] \n"
         "     options:\n"
-        "            -m, --measurement       Variorium power measurement name. Default: ...\n"
-        "            -f, --frequency         Frequency in hz to poll. Default: 10.0\n"
+        "            -f, --frequency         Frequency in hz to poll. Default: 1.0\n"
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
@@ -61,28 +62,43 @@ void logging(
 #define verbose(...) logging(1, __FILE__, __LINE__, __VA_ARGS__)
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
+#define MAX_MEASUREMENTS 64
+
+// handler for interrupt?
+void interrupt(int signum)
+{
+	verbose("Interrupt caught. Exiting loop.\n");
+	stop = 1;
+}
+
 int main(int argc, char **argv)
 {
-	int c, err;
-	double freq = 10;
-	char PowerLimit[24] = "_PACKAGE_POWER_LIMITS";
-	char *cmd;
+	int i, char_opt, err;
+	double freq = 1;
 
+	// register callback handler for interrupt
+	signal(SIGINT, interrupt);
+
+	ctxt = nrm_ctxt_create();
+	assert(ctxt != NULL);
+	nrm_init(ctxt, "nrm-power", 0, 0);
+	verbose("NRM context initialized.\n");
+
+	// TODO: fix "-v" not being parsed as verbose
 	while (1) {
 		static struct option long_options[] = {
 		        {"verbose", no_argument, &log_level, 1},
 		        {"frequency", optional_argument, 0, 'f'},
 		        {"help", no_argument, 0, 'h'},
-		        {"measurement", required_argument, 0, 'm'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "+vf:m:h", long_options,
-		                &option_index);
+		char_opt = getopt_long(argc, argv, "+vf:m:h", long_options,
+		                       &option_index);
 
-		if (c == -1)
+		if (char_opt == -1)
 			break;
-		switch (c) {
+		switch (char_opt) {
 		case 0:
 			break;
 		case 'f':
@@ -93,9 +109,6 @@ int main(int argc, char **argv)
 				      strerror(errno));
 				exit(EXIT_FAILURE);
 			}
-			break;
-		case 'm':
-			strcpy(PowerLimit, optarg);
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
@@ -108,118 +121,54 @@ int main(int argc, char **argv)
 		}
 	}
 
-	verbose("verbose=%d; freq=%f; measurement=%s\n", log_level, freq,
-	        PowerLimit);
 
-	ctxt = nrm_ctxt_create();
-	assert(ctxt != NULL);
-	nrm_init(ctxt, "nrm-power", 0, 0);
-	verbose("NRM context initialized.\n");
+	nrm_scope_t *nrm_scopes[MAX_MEASUREMENTS];
 
-	scope = nrm_scope_create();
-	nrm_scope_threadshared(scope);
-	verbose("NRM scope initialized.\n");
+	for (i = 0; i < MAX_MEASUREMENTS; i++) {
+		scope = nrm_scope_create();
+		nrm_scope_threadshared(scope);
+		nrm_scopes[i] = scope;
+	}
+	verbose("NRM scopes initialized.\n");
 
-	// initialize PAPI
-	// int papi_retval;
-	// papi_retval = PAPI_library_init(PAPI_VER_CURRENT);
-  //
-	// if (papi_retval != PAPI_VER_CURRENT) {
-	// 	error("PAPI library init error: %s\n",
-	// 	      PAPI_strerror(papi_retval));
-	// 	exit(EXIT_FAILURE);
-	// }
-  //
-	// verbose("PAPI initialized.\n");
-  //
-	// /* setup PAPI interface */
-	// int EventCode, EventSet = PAPI_NULL;
-  //
-	// err = PAPI_event_name_to_code(EventCodeStr, &EventCode);
-	// if (err != PAPI_OK) {
-	// 	error("PAPI event_name translation error: %s\n",
-	// 	      PAPI_strerror(err));
-	// }
-	// err = PAPI_create_eventset(&EventSet);
-	// if (err != PAPI_OK) {
-	// 	error("PAPI eventset creation error: %s\n", PAPI_strerror(err));
-	// }
-  //
-	// err = PAPI_add_event(EventSet, EventCode);
-	// if (err != PAPI_OK) {
-	// 	error("PAPI eventset append error: %s\n", PAPI_strerror(err));
-	// }
-  //
-	// verbose("PAPI code string %s converted to PAPI code %i, and registered.\n",
-	//         EventCodeStr, EventCode);
+	long long *event_values;
 
-	/* launch? command, sample counters */
-	unsigned long long counter;
+	event_values = calloc(MAX_MEASUREMENTS, sizeof(long long));
 
-	// int pid = fork();
-	// if (pid < 0) {
-	// 	error("perfwrapper fork error\n");
-	// 	exit(EXIT_FAILURE);
-	// } else if (pid == 0) {
-	// 	/* child, needs to exec the cmd */
-	// 	err = execvp(argv[optind], &argv[optind]);
-	// 	error("error executing command: %s\n", strerror(errno));
-	// 	exit(EXIT_FAILURE);
-	// }
-
-	// /* us, need to sample counters */
-	// err = PAPI_attach(EventSet, pid);
-	// if (err != PAPI_OK) {
-	// 	error("PAPI eventset attach error: %s\n", PAPI_strerror(err));
-	// }
-	// verbose("PAPI attached to process with pid %i\n", pid);
-  //
-	// err = PAPI_start(EventSet);
-	// if (err != PAPI_OK) {
-	// 	error("PAPI start error: %s\n", PAPI_strerror(err));
-	// }
-	// verbose("PAPI started. Initializing event read/send to NRM\n");
+	// loop until ctrl+c interrupt?
+	stop = 0;
+	double sleeptime = 1 / freq;
 
 	do {
 
 		/* sleep for a frequency */
-		double sleeptime = 1 / freq;
 		struct timespec req, rem;
 		req.tv_sec = ceil(sleeptime);
 		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
-		/* deal with signal interrupts */
+
 		do {
 			err = nanosleep(&req, &rem);
 			req = rem;
 		} while (err == -1 && errno == EINTR);
 
-		// /* sample and report */
-		// err = PAPI_read(EventSet, &counter);
-		// if (err != PAPI_OK) {
-		// 	error("PAPI event read error: %s\n",
-		// 	      PAPI_strerror(err));
-		// 	exit(EXIT_FAILURE);
-		// }
+    assert(variorum_print_power() == 0);
 
-    // err = variorum_monitoring(&counter);
-    err = variorum_print_verbose_power_limit();
-    assert(err == 0);
-
-		// nrm_send_progress(ctxt, counter, scope);
-
-		/* loop until child exits */
-
-	} while (1);
-	verbose("Finalizing PAPI-event read/send to NRM.\n");
+		verbose("scaled energy measurements:\n");
+	} while (!stop);
 
 	/* final send here */
-	// PAPI_stop(EventSet, &counter);
-	nrm_send_progress(ctxt, counter, scope);
 
-	verbose("Finalizing NRM context. Exiting.\n");
 	/* finalize program */
 	nrm_fini(ctxt);
-	nrm_scope_delete(scope);
+	verbose("Finalized NRM context.\n");
+
+	for (i = 0; i < num_events; i++) {
+		nrm_scope_delete(nrm_scopes[i]);
+	}
+	verbose("NRM scopes deleted.\n");
+
 	nrm_ctxt_delete(ctxt);
+	verbose("NRM context deleted. Exiting.\n");
+
 	exit(EXIT_SUCCESS);
 }
