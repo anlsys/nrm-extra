@@ -75,6 +75,7 @@ int main(int argc, char **argv)
 {
 	int i, char_opt, err;
 	double freq = 1;
+  json_t *json_measurements = json_object();;
 
 	// register callback handler for interrupt
 	signal(SIGINT, interrupt);
@@ -131,9 +132,8 @@ int main(int argc, char **argv)
 	}
 	verbose("NRM scopes initialized.\n");
 
-	long long *event_values;
-
-	event_values = calloc(MAX_MEASUREMENTS, sizeof(long long));
+	double *event_values;
+	event_values = calloc(MAX_MEASUREMENTS, sizeof(double));
 
 	// loop until ctrl+c interrupt?
 	stop = 0;
@@ -151,9 +151,18 @@ int main(int argc, char **argv)
 			req = rem;
 		} while (err == -1 && errno == EINTR);
 
-    assert(variorum_print_power() == 0);
+    verbose("%s\n", "about to get measurements.....");
 
-		verbose("scaled energy measurements:\n");
+    assert(variorum_get_node_power_json(json_measurements) == 0);
+
+    verbose("%s\n", "about to dump to string.....");
+
+    char *json_soutput = json_dumps(json_measurements, JSON_INDENT(4));
+
+    verbose("%s\n", "about to print.....");
+
+    printf("%s\n", json_soutput);
+    free(json_soutput);
 	} while (!stop);
 
 	/* final send here */
@@ -162,7 +171,7 @@ int main(int argc, char **argv)
 	nrm_fini(ctxt);
 	verbose("Finalized NRM context.\n");
 
-	for (i = 0; i < num_events; i++) {
+	for (i = 0; i < MAX_MEASUREMENTS; i++) {
 		nrm_scope_delete(nrm_scopes[i]);
 	}
 	verbose("NRM scopes deleted.\n");

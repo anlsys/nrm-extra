@@ -1,6 +1,6 @@
 AM_CFLAGS = @LIBNRM_CFLAGS@ @VARIORUM_CFLAGS@ @JANSSON_CFLAGS@
 AM_LDFLAGS = @LIBNRM_LIBS@ @VARIORUM_LIBS@ @JANSSON_LIBS@
 
-nrm_power_SOURCES = nrmpower.c
+nrm_power_SOURCES = nrmpower_variorum.c
 
 bin_PROGRAMS = nrm-power
