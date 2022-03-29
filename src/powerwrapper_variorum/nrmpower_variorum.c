@@ -153,7 +153,6 @@ int main(int argc, char **argv)
 
     verbose("%s\n", "about to get measurements.....");
 
-    assert(variorum_print_features() == 0);
     assert(variorum_get_node_power_json(json_measurements) == 0);
 
     verbose("%s\n", "about to dump to string.....");
