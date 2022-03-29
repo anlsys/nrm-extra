@@ -49,13 +49,13 @@ char *usage =
 void logging(
         int level, const char *file, unsigned int line, const char *fmt, ...)
 {
-	if (level <= log_level) {
-		fprintf(stderr, "%s:\t%u:\t", file, line);
-		va_list ap;
-		va_start(ap, fmt);
-		vfprintf(stderr, fmt, ap);
-		va_end(ap);
-	}
+  if (level <= log_level) {
+    fprintf(stderr, "%s:\t%u:\t", file, line);
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+  }
 }
 
 #define normal(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
@@ -67,92 +67,93 @@ void logging(
 // handler for interrupt?
 void interrupt(int signum)
 {
-	verbose("Interrupt caught. Exiting loop.\n");
-	stop = 1;
+  verbose("Interrupt caught. Exiting loop.\n");
+  stop = 1;
 }
 
 int main(int argc, char **argv)
 {
-	int i, char_opt, err;
-	double freq = 1;
-  json_t *json_measurements = json_object();;
+  int i, char_opt, err;
+  double freq = 1;
+  json_t *json_measurements = json_object();
 
-	// register callback handler for interrupt
-	signal(SIGINT, interrupt);
+  // register callback handler for interrupt
+  signal(SIGINT, interrupt);
 
-	ctxt = nrm_ctxt_create();
-	assert(ctxt != NULL);
-	nrm_init(ctxt, "nrm-power", 0, 0);
-	verbose("NRM context initialized.\n");
+  ctxt = nrm_ctxt_create();
+  assert(ctxt != NULL);
+  nrm_init(ctxt, "nrm-power", 0, 0);
+  verbose("NRM context initialized.\n");
 
-	// TODO: fix "-v" not being parsed as verbose
-	while (1) {
-		static struct option long_options[] = {
-		        {"verbose", no_argument, &log_level, 1},
-		        {"frequency", optional_argument, 0, 'f'},
-		        {"help", no_argument, 0, 'h'},
-		        {0, 0, 0, 0}};
+  // TODO: fix "-v" not being parsed as verbose
+  while (1) {
+    static struct option long_options[] = {
+            {"verbose", no_argument, &log_level, 1},
+            {"frequency", optional_argument, 0, 'f'},
+            {"help", no_argument, 0, 'h'},
+            {0, 0, 0, 0}};
 
-		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "+vf:m:h", long_options,
-		                       &option_index);
+    int option_index = 0;
+    char_opt = getopt_long(argc, argv, "+vf:m:h", long_options,
+                           &option_index);
 
-		if (char_opt == -1)
-			break;
-		switch (char_opt) {
-		case 0:
-			break;
-		case 'f':
-			errno = 0;
-			freq = strtod(optarg, NULL);
-			if (errno != 0 || freq == 0) {
-				error("Error during conversion to double: %s\n",
-				      strerror(errno));
-				exit(EXIT_FAILURE);
-			}
-			break;
-		case 'h':
-			fprintf(stderr, "%s", usage);
-			exit(EXIT_SUCCESS);
-		case '?':
-		default:
-			error("Wrong option argument\n");
-			error("%s", usage);
-			exit(EXIT_FAILURE);
-		}
-	}
+    if (char_opt == -1)
+      break;
+    switch (char_opt) {
+    case 0:
+      break;
+    case 'f':
+      errno = 0;
+      freq = strtod(optarg, NULL);
+      if (errno != 0 || freq == 0) {
+        error("Error during conversion to double: %s\n",
+              strerror(errno));
+        exit(EXIT_FAILURE);
+      }
+      break;
+    case 'h':
+      fprintf(stderr, "%s", usage);
+      exit(EXIT_SUCCESS);
+    case '?':
+    default:
+      error("Wrong option argument\n");
+      error("%s", usage);
+      exit(EXIT_FAILURE);
+    }
+  }
 
 
-	nrm_scope_t *nrm_scopes[MAX_MEASUREMENTS];
+  nrm_scope_t *nrm_scopes[MAX_MEASUREMENTS];
 
-	for (i = 0; i < MAX_MEASUREMENTS; i++) {
-		scope = nrm_scope_create();
-		nrm_scope_threadshared(scope);
-		nrm_scopes[i] = scope;
-	}
-	verbose("NRM scopes initialized.\n");
+  for (i = 0; i < MAX_MEASUREMENTS; i++) {
+    scope = nrm_scope_create();
+    nrm_scope_threadshared(scope);
+    nrm_scopes[i] = scope;
+  }
+  verbose("NRM scopes initialized.\n");
 
-	double *event_values;
-	event_values = calloc(MAX_MEASUREMENTS, sizeof(double));
+  double *event_values;
+  event_values = calloc(MAX_MEASUREMENTS, sizeof(double));
 
-	// loop until ctrl+c interrupt?
-	stop = 0;
-	double sleeptime = 1 / freq;
+  // loop until ctrl+c interrupt?
+  stop = 0;
+  double sleeptime = 1 / freq;
 
-	do {
+  do {
 
-		/* sleep for a frequency */
-		struct timespec req, rem;
-		req.tv_sec = ceil(sleeptime);
-		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
+    /* sleep for a frequency */
+    struct timespec req, rem;
+    req.tv_sec = ceil(sleeptime);
+    req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
 
-		do {
-			err = nanosleep(&req, &rem);
-			req = rem;
-		} while (err == -1 && errno == EINTR);
+    do {
+      err = nanosleep(&req, &rem);
+      req = rem;
+    } while (err == -1 && errno == EINTR);
 
     verbose("%s\n", "about to get measurements.....");
 
+    assert(variorum_print_features() == 0);
     assert(variorum_get_node_power_json(json_measurements) == 0);
 
     verbose("%s\n", "about to dump to string.....");
@@ -163,21 +164,21 @@ int main(int argc, char **argv)
 
     printf("%s\n", json_soutput);
     free(json_soutput);
-	} while (!stop);
+  } while (!stop);
 
-	/* final send here */
+  /* final send here */
 
-	/* finalize program */
-	nrm_fini(ctxt);
-	verbose("Finalized NRM context.\n");
+  /* finalize program */
+  nrm_fini(ctxt);
+  verbose("Finalized NRM context.\n");
 
-	for (i = 0; i < MAX_MEASUREMENTS; i++) {
-		nrm_scope_delete(nrm_scopes[i]);
-	}
-	verbose("NRM scopes deleted.\n");
+  for (i = 0; i < MAX_MEASUREMENTS; i++) {
+    nrm_scope_delete(nrm_scopes[i]);
+  }
+  verbose("NRM scopes deleted.\n");
 
-	nrm_ctxt_delete(ctxt);
-	verbose("NRM context deleted. Exiting.\n");
+  nrm_ctxt_delete(ctxt);
+  verbose("NRM context deleted. Exiting.\n");
 
-	exit(EXIT_SUCCESS);
+  exit(EXIT_SUCCESS);
 }
