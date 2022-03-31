@@ -62,7 +62,7 @@ void logging(
 #define verbose(...) logging(1, __FILE__, __LINE__, __VA_ARGS__)
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
-#define MAX_MEASUREMENTS 64
+#define MAX_MEASUREMENTS 16
 
 // handler for interrupt?
 void interrupt(int signum)
@@ -73,7 +73,7 @@ void interrupt(int signum)
 
 int main(int argc, char **argv)
 {
-  int i, char_opt, err;
+  int char_opt, err;
   double freq = 1;
   json_t *json_measurements = json_object();
 
@@ -122,25 +122,45 @@ int main(int argc, char **argv)
     }
   }
 
+  // 1st measure, only to determine viable measurements
+  // without delta, watts values should all be zero
+  // but since we're not reporting yet, that's ok
+  assert(variorum_get_node_power_json(json_measurements) == 0);
 
   nrm_scope_t *nrm_scopes[MAX_MEASUREMENTS];
+  int i=0, nrm_tot_scopes=0, nrm_type=-1;
+  const char *key;
+  json_t *value;
 
-  for (i = 0; i < MAX_MEASUREMENTS; i++) {
-    scope = nrm_scope_create();
-    nrm_scope_threadshared(scope);
-    nrm_scopes[i] = scope;
+  json_object_foreach(json_measurements, key, value){
+    // variorum inits un-measureable as -1.0, measureable as 0.0
+    if (strstr(key, "socket") && (json_real_value(value) != -1.0)){
+      scope = nrm_scope_create();
+      nrm_scope_threadshared(scope);
+
+      if (strstr(key, "power_cpu_watts")){
+        nrm_type = NRM_SCOPE_TYPE_CPU;
+      } else if (strstr(key, "power_mem_watts")){
+        nrm_type = NRM_SCOPE_TYPE_NUMA;
+      } else if (strstr(key, "power_gpu_watts")){
+        nrm_type = NRM_SCOPE_TYPE_GPU;
+      }
+
+      nrm_scope_add(scope, nrm_type, i);
+      nrm_scopes[i] = scope;
+      i++;
+    }
   }
-  verbose("NRM scopes initialized.\n");
+  nrm_tot_scopes = i;
 
-  double *event_values;
-  event_values = calloc(MAX_MEASUREMENTS, sizeof(double));
+  verbose("Variorum socket measurements detected.\n");
+  verbose("NRM scopes initialized.\n");
 
   // loop until ctrl+c interrupt?
   stop = 0;
   double sleeptime = 1 / freq;
 
   do {
-
     /* sleep for a frequency */
     struct timespec req, rem;
     req.tv_sec = ceil(sleeptime);
@@ -151,27 +171,31 @@ int main(int argc, char **argv)
       req = rem;
     } while (err == -1 && errno == EINTR);
 
-    verbose("%s\n", "about to get measurements.....");
-
     assert(variorum_get_node_power_json(json_measurements) == 0);
 
-    verbose("%s\n", "about to dump to string.....");
+    i=0;
+    json_object_foreach(json_measurements, key, value){
+      // should match each nrm scope created earlier
+      if (strstr(key, "socket") && (json_real_value(value) != -1.0)){
+        nrm_send_progress(ctxt, json_real_value(value), nrm_scopes[i]);
+        i++;
+      }
+    }
 
-    char *json_soutput = json_dumps(json_measurements, JSON_INDENT(4));
-
-    verbose("%s\n", "about to print.....");
-
-    printf("%s\n", json_soutput);
-    free(json_soutput);
+    // Some verbose output just to look at numbers
+    if (log_level >= 1){
+      char *json_soutput = json_dumps(json_measurements, JSON_INDENT(4));
+      verbose("%s\n", json_soutput);
+      free(json_soutput);
+    }
   } while (!stop);
 
   /* final send here */
-
   /* finalize program */
   nrm_fini(ctxt);
   verbose("Finalized NRM context.\n");
 
-  for (i = 0; i < MAX_MEASUREMENTS; i++) {
+  for (i = 0; i < nrm_tot_scopes; i++) {
     nrm_scope_delete(nrm_scopes[i]);
   }
   verbose("NRM scopes deleted.\n");
