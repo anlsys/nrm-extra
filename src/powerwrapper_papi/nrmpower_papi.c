@@ -181,13 +181,27 @@ int main(int argc, char **argv)
 	}
 
 	nrm_scope_t *nrm_scopes[MAX_powercap_EVENTS];
+	int scope_idx = 0; // only for nrm_scope_add()
 
+	// Creates and configures nrm scopes for each compatible event
 	for (i = 0; i < num_events; i++) {
-		scope = nrm_scope_create();
-		nrm_scope_threadshared(scope);
-		nrm_scopes[i] = scope;
+		if (strstr(EventNames[i], "ENERGY_UJ") &&
+		    (DataTypes[i] == PAPI_DATATYPE_UINT64)) {
+			scope = nrm_scope_create();
+			nrm_scope_threadshared(scope);
+
+			if (strstr(EventNames[i], "SUBZONE")) {
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
+				              scope_idx);
+			} else {
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+				              scope_idx);
+			}
+			nrm_scopes[i] = scope;
+			scope_idx++;
+		}
 	}
-	verbose("NRM scopes initialized.\n");
+	verbose("%d NRM scopes initialized.\n", scope_idx);
 
 	long long before_time, after_time;
 	long long *event_values;
@@ -230,9 +244,9 @@ int main(int argc, char **argv)
 					              elapsed_time;
 					nrm_send_progress(ctxt, watts_value,
 					                  nrm_scopes[i]);
-					verbose("%-45s%4.6f J (Average Power %.1fW)\n",
+					verbose("%-45s%4.2f J (Average Power %.2fW)\n",
 					        EventNames[i],
-					        (double)event_values[i] / 1.0e6,
+					        (double)event_values[i],
 					        watts_value);
 				}
 			}
