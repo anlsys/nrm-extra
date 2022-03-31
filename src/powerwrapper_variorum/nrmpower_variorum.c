@@ -8,9 +8,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
-/* Filename: nrmpower_papi.c
+/* Filename: nrmpower_variorum.c
  *
- * Description: Implements middleware between powercap, measured via PAPI,
+ * Description: Implements power measurements via Variorum
  *               and the NRM downstream interface.
  */
 
@@ -42,7 +42,6 @@ static struct nrm_scope *scope;
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
-        "            -f, --frequency         Frequency in hz to poll. Default: 1.0\n"
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
@@ -89,27 +88,17 @@ int main(int argc, char **argv)
 	while (1) {
 		static struct option long_options[] = {
 		        {"verbose", no_argument, &log_level, 1},
-		        {"frequency", optional_argument, 0, 'f'},
 		        {"help", no_argument, 0, 'h'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "+vf:m:h", long_options,
+		char_opt = getopt_long(argc, argv, "+v:m:h", long_options,
 		                       &option_index);
 
 		if (char_opt == -1)
 			break;
 		switch (char_opt) {
 		case 0:
-			break;
-		case 'f':
-			errno = 0;
-			freq = strtod(optarg, NULL);
-			if (errno != 0 || freq == 0) {
-				error("Error during conversion to double: %s\n",
-				      strerror(errno));
-				exit(EXIT_FAILURE);
-			}
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
@@ -160,7 +149,7 @@ int main(int argc, char **argv)
 
 	// loop until ctrl+c interrupt?
 	stop = 0;
-	double sleeptime = 1 / freq;
+	double sleeptime = 1;
 
 	verbose("Beginning loop. ctrl+c to exit.\n");
 	do {
