@@ -23,6 +23,7 @@
 #include <sched.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,7 +62,9 @@ void logging(
 #define verbose(...) logging(1, __FILE__, __LINE__, __VA_ARGS__)
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
-#define MAX_powercap_EVENTS 64
+#define MAX_powercap_EVENTS 128
+#define MAX_CPU_scopes 128
+#define MAX_NUMA_scopes 4
 
 // handler for interrupt?
 void interrupt(int signum)
@@ -70,9 +73,25 @@ void interrupt(int signum)
 	stop = 1;
 }
 
+bool is_energy_event(char *event_name, uint64_t data_type)
+{
+	return (strstr(event_name, "ENERGY_UJ") &&
+	        (data_type == PAPI_DATATYPE_UINT64));
+}
+
+bool is_NUMA_event(char *event_name)
+{
+	return (strstr(event_name, "SUBZONE"));
+}
+
+double get_watts(double event_value, double elapsed_time)
+{
+	return ((double)event_value / 1.0e6) / elapsed_time;
+}
+
 int main(int argc, char **argv)
 {
-	int i, char_opt, err;
+	int i, j, char_opt, err;
 	double freq = 1;
 
 	// register callback handler for interrupt
@@ -180,28 +199,41 @@ int main(int argc, char **argv)
 		                                  powercap_component_id);
 	}
 
-	nrm_scope_t *nrm_scopes[MAX_powercap_EVENTS];
-	int scope_idx = 0; // only for nrm_scope_add()
+	nrm_scope_t *nrm_cpu_scopes[MAX_CPU_scopes],
+	        *nrm_numa_scopes[MAX_NUMA_scopes];
+	const PAPI_hw_info_t *hwinfo = NULL;
+	int cpu_idx = 0, numa_idx = 0;
+	char *event;
 
-	// Creates and configures nrm scopes for each compatible event
+	hwinfo = PAPI_get_hardware_info(); // to retrieve logical CPUs per
+	                                   // socket
+	assert(hwinfo != NULL);
+
+	// Configures NRM scopes for each compatible event, per logical CPU and
+	// NUMA node
 	for (i = 0; i < num_events; i++) {
-		if (strstr(EventNames[i], "ENERGY_UJ") &&
-		    (DataTypes[i] == PAPI_DATATYPE_UINT64)) {
-			scope = nrm_scope_create();
-			nrm_scope_threadshared(scope);
-
-			if (strstr(EventNames[i], "SUBZONE")) {
+		event = EventNames[i];
+		if (is_energy_event(event, DataTypes[i])) {
+			if (is_NUMA_event(event)) {
+				scope = nrm_scope_create();
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
-				              scope_idx);
-			} else {
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-				              scope_idx);
+				              numa_idx);
+				nrm_numa_scopes[numa_idx] = scope;
+				numa_idx++;
+
+			} else { // CPU event
+				for (j = 0; j < hwinfo->ncpu; j++) {
+					scope = nrm_scope_create();
+					nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+					              cpu_idx);
+					nrm_cpu_scopes[cpu_idx] = scope;
+					cpu_idx++;
+				}
 			}
-			nrm_scopes[i] = scope;
-			scope_idx++;
 		}
 	}
-	verbose("%d NRM scopes initialized.\n", scope_idx);
+
+	verbose("%d NRM scopes initialized.\n", cpu_idx + numa_idx);
 
 	long long before_time, after_time;
 	long long *event_values;
@@ -221,8 +253,8 @@ int main(int argc, char **argv)
 
 		/* sleep for a frequency */
 		struct timespec req, rem;
-		req.tv_sec = ceil(sleeptime);
-		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
+		req.tv_sec = floor(sleeptime);
+		req.tv_nsec = sleeptime * 1e9 - floor(sleeptime) * 1e9;
 
 		do {
 			err = nanosleep(&req, &rem);
@@ -235,20 +267,30 @@ int main(int argc, char **argv)
 		// Stop and read EventSet measurements into "event_values"...
 		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
 
+		cpu_idx = 0, numa_idx = 0; // Reset CPU and NUMA indexes
+
 		verbose("scaled energy measurements:\n");
 		for (i = 0; i < num_events; i++) {
-			if (strstr(EventNames[i], "ENERGY_UJ")) {
-				if (DataTypes[i] == PAPI_DATATYPE_UINT64) {
-					watts_value = ((double)event_values[i] /
-					               1.0e6) /
-					              elapsed_time;
-					nrm_send_progress(ctxt, watts_value,
-					                  nrm_scopes[i]);
-					verbose("%-45s%4.2f J (Average Power %.2fW)\n",
-					        EventNames[i],
-					        (double)event_values[i],
-					        watts_value);
+			event = EventNames[i];
+			if (is_energy_event(event, DataTypes[i])) {
+				watts_value = get_watts(event_values[i],
+				                        elapsed_time);
+				if (is_NUMA_event(event)) {
+					nrm_send_progress(
+					        ctxt, watts_value,
+					        nrm_numa_scopes[numa_idx]);
+					numa_idx++;
+				} else {
+					for (j = 0; j < hwinfo->ncpu; j++) {
+						nrm_send_progress(
+						        ctxt, watts_value,
+						        nrm_cpu_scopes[cpu_idx]);
+						cpu_idx++;
+					}
 				}
+				verbose("%-45s%4.2f J (Average Power %.2fW)\n",
+				        EventNames[i], (double)event_values[i],
+				        watts_value);
 			}
 		}
 	} while (!stop);
@@ -260,26 +302,41 @@ int main(int argc, char **argv)
 	}
 
 	/* final send here */
+	cpu_idx = 0, numa_idx = 0;
+
 	for (i = 0; i < num_events; i++) {
-		if (strstr(EventNames[i], "ENERGY_UJ")) {
-			if (DataTypes[i] == PAPI_DATATYPE_UINT64) {
-				watts_value =
-				        ((double)event_values[i] / 1.0e6) /
-				        elapsed_time;
+		event = EventNames[i];
+		if (is_energy_event(event, DataTypes[i])) {
+			watts_value = get_watts(event_values[i], elapsed_time);
+			if (is_NUMA_event(event)) {
 				nrm_send_progress(ctxt, watts_value,
-				                  nrm_scopes[i]);
+				                  nrm_numa_scopes[numa_idx]);
+				numa_idx++;
+			} else {
+				for (j = 0; j < hwinfo->ncpu; j++) {
+					nrm_send_progress(
+					        ctxt, watts_value,
+					        nrm_cpu_scopes[cpu_idx]);
+					cpu_idx++;
+				}
 			}
 		}
 	}
+
 	verbose("Finalized PAPI-event read/send to NRM.\n");
 
 	/* finalize program */
 	nrm_fini(ctxt);
 	verbose("Finalized NRM context.\n");
 
-	for (i = 0; i < num_events; i++) {
-		nrm_scope_delete(nrm_scopes[i]);
+	for (i = 0; i < MAX_CPU_scopes; i++) {
+		nrm_scope_delete(nrm_cpu_scopes[i]);
 	}
+
+	for (i = 0; i < MAX_NUMA_scopes; i++) {
+		nrm_scope_delete(nrm_numa_scopes[i]);
+	}
+
 	verbose("NRM scopes deleted.\n");
 
 	nrm_ctxt_delete(ctxt);
