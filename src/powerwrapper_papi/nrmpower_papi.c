@@ -11,13 +11,14 @@
 /* Filename: nrmpower_papi.c
  *
  * Description: Implements middleware between powercap, measured via PAPI,
- *               and the NRM downstream interface.
+ *               and the NRM downstream interface. Resources detected via hwloc.
  */
 
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
+#include <hwloc.h>
 #include <math.h>
 #include <papi.h>
 #include <sched.h>
@@ -63,8 +64,8 @@ void logging(
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
 #define MAX_powercap_EVENTS 128
-#define MAX_CPU_scopes 128
-#define MAX_NUMA_scopes 4
+#define MAX_CPU_scopes 256
+#define MAX_NUMA_scopes 8
 
 // handler for interrupt?
 void interrupt(int signum)
@@ -87,6 +88,20 @@ bool is_NUMA_event(char *event_name)
 double get_watts(double event_value, double elapsed_time)
 {
 	return ((double)event_value / 1.0e6) / elapsed_time;
+}
+
+int parse_numa_id(char *event_name)
+{
+	char str_numa_id;
+	str_numa_id = event_name[strlen(event_name) - 1];
+	return str_numa_id - '0'; // ??? converts numa_id to integer ???
+}
+
+int get_cpu_idx(hwloc_topology_t topology, int cpu)
+{
+	hwloc_obj_t pu;
+	pu = hwloc_get_pu_obj_by_os_index(topology, cpu);
+	return pu->logical_index;
 }
 
 int main(int argc, char **argv)
@@ -199,41 +214,48 @@ int main(int argc, char **argv)
 		                                  powercap_component_id);
 	}
 
+	hwloc_topology_t topology;
+	hwloc_obj_t numanode;
+	hwloc_cpuset_t cpus, cpu_sets[MAX_NUMA_scopes];
+
 	nrm_scope_t *nrm_cpu_scopes[MAX_CPU_scopes],
 	        *nrm_numa_scopes[MAX_NUMA_scopes];
-	const PAPI_hw_info_t *hwinfo = NULL;
-	int cpu_idx = 0, numa_idx = 0;
+	int n_numanodes = 0, n_cpus = 0, n_cpuset_counted = 0, n_scopes = 0,
+	    cpu_idx, cpu, numa_id;
 	char *event;
 
-	hwinfo = PAPI_get_hardware_info(); // to retrieve logical CPUs per
-	                                   // socket
-	assert(hwinfo != NULL);
+	assert(hwloc_topology_init(&topology) == 0);
+	assert(hwloc_topology_load(topology) == 0);
 
-	// Configures NRM scopes for each compatible event, per logical CPU and
-	// NUMA node
-	for (i = 0; i < num_events; i++) {
-		event = EventNames[i];
-		if (is_energy_event(event, DataTypes[i])) {
-			if (is_NUMA_event(event)) {
-				scope = nrm_scope_create();
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
-				              numa_idx);
-				nrm_numa_scopes[numa_idx] = scope;
-				numa_idx++;
+	n_numanodes = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_NUMANODE);
+	n_cpus = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_PU);
 
-			} else { // CPU event
-				for (j = 0; j < hwinfo->ncpu; j++) {
-					scope = nrm_scope_create();
-					nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-					              cpu_idx);
-					nrm_cpu_scopes[cpu_idx] = scope;
-					cpu_idx++;
-				}
-			}
-		}
+	for (i = 0; i < n_numanodes; i++) {
+		scope = nrm_scope_create();
+		nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, i);
+		nrm_numa_scopes[i] = scope;
+		n_scopes++;
+
+		numanode = hwloc_get_obj_by_type(topology, HWLOC_OBJ_NUMANODE,
+		                                 i); // HWLOC_OBJ_PACKAGE
+		cpus = numanode->cpuset;
+		cpu_sets[i] = cpus; // cpusets indexed by NUMANODE index
+
+		hwloc_bitmap_foreach_begin(cpu, cpus)
+		        scope = nrm_scope_create();
+		cpu_idx = get_cpu_idx(topology, cpu);
+		nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, cpu_idx);
+		nrm_cpu_scopes[cpu_idx] = scope;
+		n_scopes++;
+		n_cpuset_counted++;
+
+		hwloc_bitmap_foreach_end();
 	}
 
-	verbose("%d NRM scopes initialized.\n", cpu_idx + numa_idx);
+	assert(n_cpuset_counted == n_cpus);
+
+	verbose("%d NRM scopes initialized (%d NUMA and %d CPU)\n", n_scopes,
+	        n_numanodes, n_cpuset_counted);
 
 	long long before_time, after_time;
 	long long *event_values;
@@ -241,7 +263,6 @@ int main(int argc, char **argv)
 
 	event_values = calloc(num_events, sizeof(long long));
 
-	// loop until ctrl+c interrupt?
 	stop = 0;
 	double sleeptime = 1 / freq;
 
@@ -267,26 +288,28 @@ int main(int argc, char **argv)
 		// Stop and read EventSet measurements into "event_values"...
 		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
 
-		cpu_idx = 0, numa_idx = 0; // Reset CPU and NUMA indexes
-
 		verbose("scaled energy measurements:\n");
 		for (i = 0; i < num_events; i++) {
 			event = EventNames[i];
 			if (is_energy_event(event, DataTypes[i])) {
 				watts_value = get_watts(event_values[i],
 				                        elapsed_time);
+				numa_id = parse_numa_id(event);
+
 				if (is_NUMA_event(event)) {
 					nrm_send_progress(
 					        ctxt, watts_value,
-					        nrm_numa_scopes[numa_idx]);
-					numa_idx++;
+					        nrm_numa_scopes[numa_id]);
+
 				} else {
-					for (j = 0; j < hwinfo->ncpu; j++) {
-						nrm_send_progress(
-						        ctxt, watts_value,
-						        nrm_cpu_scopes[cpu_idx]);
-						cpu_idx++;
-					}
+					hwloc_bitmap_foreach_begin(
+					        cpu, cpu_sets[numa_id])
+					        cpu_idx = get_cpu_idx(topology,
+					                              cpu);
+					nrm_send_progress(
+					        ctxt, watts_value,
+					        nrm_cpu_scopes[cpu_idx]);
+					hwloc_bitmap_foreach_end();
 				}
 				verbose("%-45s%4.2f J (Average Power %.2fW)\n",
 				        EventNames[i], (double)event_values[i],
@@ -294,38 +317,36 @@ int main(int argc, char **argv)
 			}
 		}
 	} while (!stop);
-
+	//
 	int papi_status;
 	assert(PAPI_state(EventSet, &papi_status) == PAPI_OK);
 	if (papi_status == PAPI_RUNNING) {
 		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
 	}
-
-	/* final send here */
-	cpu_idx = 0, numa_idx = 0;
-
+	//
+	// /* final send here */
 	for (i = 0; i < num_events; i++) {
 		event = EventNames[i];
 		if (is_energy_event(event, DataTypes[i])) {
 			watts_value = get_watts(event_values[i], elapsed_time);
+			numa_id = parse_numa_id(event);
+
 			if (is_NUMA_event(event)) {
 				nrm_send_progress(ctxt, watts_value,
-				                  nrm_numa_scopes[numa_idx]);
-				numa_idx++;
+				                  nrm_numa_scopes[numa_id]);
+
 			} else {
-				for (j = 0; j < hwinfo->ncpu; j++) {
-					nrm_send_progress(
-					        ctxt, watts_value,
-					        nrm_cpu_scopes[cpu_idx]);
-					cpu_idx++;
-				}
+				hwloc_bitmap_foreach_begin(cpu,
+				                           cpu_sets[numa_id])
+				        cpu_idx = get_cpu_idx(topology, cpu);
+				nrm_send_progress(ctxt, watts_value,
+				                  nrm_cpu_scopes[cpu_idx]);
+				hwloc_bitmap_foreach_end();
 			}
 		}
 	}
-
 	verbose("Finalized PAPI-event read/send to NRM.\n");
 
-	/* finalize program */
 	nrm_fini(ctxt);
 	verbose("Finalized NRM context.\n");
 
