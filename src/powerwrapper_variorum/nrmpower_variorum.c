@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
+#include <hwloc.h>
 #include <jansson.h>
 #include <math.h>
 #include <sched.h>
@@ -32,7 +33,6 @@
 #include <variorum.h>
 
 #include <nrm.h>
-#include <hwloc.h>
 
 static int log_level = 0;
 volatile sig_atomic_t stop;
@@ -129,8 +129,10 @@ int main(int argc, char **argv)
 	hwloc_obj_t numanode;
 	hwloc_cpuset_t cpus;
 
-	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS], *nrm_numa_scopes[MAX_MEASUREMENTS];
-	int i, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0, cpu_idx, cpu, numa_id;
+	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS],
+	        *nrm_numa_scopes[MAX_MEASUREMENTS];
+	int i, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0, cpu_idx, cpu,
+	       numa_id;
 	const char *key;
 	json_t *value;
 
@@ -142,30 +144,36 @@ int main(int argc, char **argv)
 		// variorum inits un-measureable as -1.0, measureable as 0.0
 		if (strstr(key, "socket") && (json_real_value(value) != -1.0)) {
 			scope = nrm_scope_create();
-      numa_id = key[sizeof(key)-1] - '0';
+			numa_id = key[sizeof(key) - 1] - '0';
 
-			if (strstr(key, "power_cpu_watts")) {  // need NUMANODE object to parse CPU indexes
-				numanode = hwloc_get_obj_by_type(topology, HWLOC_OBJ_NUMANODE, numa_id);
+			if (strstr(key, "power_cpu_watts")) { // need NUMANODE
+				                              // object to parse
+				                              // CPU indexes
+				numanode = hwloc_get_obj_by_type(
+				        topology, HWLOC_OBJ_NUMANODE, numa_id);
 				cpus = numanode->cpuset;
 
 				hwloc_bitmap_foreach_begin(cpu, cpus)
-	        cpu_idx = get_cpu_idx(topology, cpu);
-          nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,cpu_idx);
+				        cpu_idx = get_cpu_idx(topology, cpu);
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+				              cpu_idx);
 				hwloc_bitmap_foreach_end();
 
 				nrm_cpu_scopes[numa_id] = scope;
 				n_cpu_scopes++;
 
 			} else if (strstr(key, "power_mem_watts")) {
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, numa_id);
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
+				              numa_id);
 				nrm_numa_scopes[numa_id] = scope;
 				n_numa_scopes++;
 			}
-      n_scopes++;
+			n_scopes++;
 		}
 	}
 
-	verbose("%d Candidate socket fields detected. NRM scopes initialized.\n", n_scopes);
+	verbose("%d Candidate socket fields detected. NRM scopes initialized.\n",
+	        n_scopes);
 
 	// loop until ctrl+c interrupt?
 	stop = 0;
@@ -185,19 +193,26 @@ int main(int argc, char **argv)
 
 		assert(variorum_get_node_power_json(json_measurements) == 0);
 
-  	json_object_foreach(json_measurements, key, value) {
-  		// variorum inits un-measureable as -1.0, measureable as 0.0
-  		if (strstr(key, "socket") && (json_real_value(value) != -1.0)) {
-        numa_id = key[sizeof(key)-1] - '0';
+		json_object_foreach(json_measurements, key, value)
+		{
+			// variorum inits un-measureable as -1.0, measureable as
+			// 0.0
+			if (strstr(key, "socket") &&
+			    (json_real_value(value) != -1.0)) {
+				numa_id = key[sizeof(key) - 1] - '0';
 
-  			if (strstr(key, "power_cpu_watts")) {
-					nrm_send_progress(ctxt, json_real_value(value), nrm_cpu_scopes[numa_id]);
+				if (strstr(key, "power_cpu_watts")) {
+					nrm_send_progress(
+					        ctxt, json_real_value(value),
+					        nrm_cpu_scopes[numa_id]);
 
-  			} else if (strstr(key, "power_mem_watts")) {
-					nrm_send_progress(ctxt, json_real_value(value), nrm_numa_scopes[numa_id]);
-  			}
-  		}
-  	}
+				} else if (strstr(key, "power_mem_watts")) {
+					nrm_send_progress(
+					        ctxt, json_real_value(value),
+					        nrm_numa_scopes[numa_id]);
+				}
+			}
+		}
 
 		// Some verbose output just to look at numbers
 		if (log_level >= 1) {
