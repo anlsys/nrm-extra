@@ -64,8 +64,7 @@ void logging(
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
 #define MAX_powercap_EVENTS 128
-#define MAX_CPU_scopes 256
-#define MAX_NUMA_scopes 8
+#define MAX_measurements 8
 
 // handler for interrupt?
 void interrupt(int signum)
@@ -92,8 +91,11 @@ double get_watts(double event_value, double elapsed_time)
 
 int parse_numa_id(char *event_name)
 {
+	// Extract zone number from each of the following:
+	// powercap:::ENERGY_UJ:ZONE0
+	// powercap:::ENERGY_UJ:ZONE0_SUBZONE0
 	char str_numa_id;
-	str_numa_id = event_name[strlen(event_name) - 1];
+	str_numa_id = event_name[25];
 	return str_numa_id - '0'; // ??? converts numa_id to integer ???
 }
 
@@ -216,46 +218,55 @@ int main(int argc, char **argv)
 
 	hwloc_topology_t topology;
 	hwloc_obj_t numanode;
-	hwloc_cpuset_t cpus, cpu_sets[MAX_NUMA_scopes];
+	hwloc_cpuset_t cpus, cpu_sets[MAX_measurements];
 
-	nrm_scope_t *nrm_cpu_scopes[MAX_CPU_scopes],
-	        *nrm_numa_scopes[MAX_NUMA_scopes];
-	int n_numanodes = 0, n_cpus = 0, n_cpuset_counted = 0, n_scopes = 0,
-	    cpu_idx, cpu, numa_id;
+	nrm_scope_t *nrm_cpu_scopes[MAX_measurements],
+	        *nrm_numa_scopes[MAX_measurements];
+	int n_energy_events = 0, n_scopes = 0, n_numa_scopes = 0,
+	    n_cpu_scopes = 0, cpu_idx, cpu, numa_id;
 	char *event;
 
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
 
-	n_numanodes = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_NUMANODE);
-	n_cpus = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_PU);
+	// INSTEAD: create a scope for each measure-able event, with
+	// corresponding indexes
+	for (i = 0; i < num_events; i++) {
+		event = EventNames[i];
 
-	for (i = 0; i < n_numanodes; i++) {
-		scope = nrm_scope_create();
-		nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, i);
-		nrm_numa_scopes[i] = scope;
-		n_scopes++;
+		if (is_energy_event(event, DataTypes[i])) {
+			n_energy_events++;
+			scope = nrm_scope_create();
+			numa_id = parse_numa_id(event); // should match
+			                                // NUMANODE's logical ID
 
-		numanode = hwloc_get_obj_by_type(topology, HWLOC_OBJ_NUMANODE,
-		                                 i); // HWLOC_OBJ_PACKAGE
-		cpus = numanode->cpuset;
-		cpu_sets[i] = cpus; // cpusets indexed by NUMANODE index
+			if (is_NUMA_event(event)) {
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
+				              numa_id);
+				nrm_numa_scopes[numa_id] = scope;
+				n_numa_scopes++;
 
-		hwloc_bitmap_foreach_begin(cpu, cpus)
-		        scope = nrm_scope_create();
-		cpu_idx = get_cpu_idx(topology, cpu);
-		nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, cpu_idx);
-		nrm_cpu_scopes[cpu_idx] = scope;
-		n_scopes++;
-		n_cpuset_counted++;
+			} else { // need NUMANODE object to parse CPU indexes
+				numanode = hwloc_get_obj_by_type(
+				        topology, HWLOC_OBJ_NUMANODE, numa_id);
+				cpus = numanode->cpuset;
 
-		hwloc_bitmap_foreach_end();
+				hwloc_bitmap_foreach_begin(cpu, cpus)
+				        cpu_idx = get_cpu_idx(topology, cpu);
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+				              cpu_idx); //
+				hwloc_bitmap_foreach_end();
+
+				nrm_cpu_scopes[numa_id] = scope;
+				n_cpu_scopes++;
+			}
+			n_scopes++;
+		}
 	}
 
-	assert(n_cpuset_counted == n_cpus);
-
+	verbose("%d candidate energy events detected.\n", n_energy_events);
 	verbose("%d NRM scopes initialized (%d NUMA and %d CPU)\n", n_scopes,
-	        n_numanodes, n_cpuset_counted);
+	        n_numa_scopes, n_cpu_scopes);
 
 	long long before_time, after_time;
 	long long *event_values;
@@ -291,25 +302,22 @@ int main(int argc, char **argv)
 		verbose("scaled energy measurements:\n");
 		for (i = 0; i < num_events; i++) {
 			event = EventNames[i];
+
 			if (is_energy_event(event, DataTypes[i])) {
 				watts_value = get_watts(event_values[i],
 				                        elapsed_time);
-				numa_id = parse_numa_id(event);
+				numa_id = parse_numa_id(event); // should match
+				                                // NUMANODE's
+				                                // logical ID
 
 				if (is_NUMA_event(event)) {
 					nrm_send_progress(
 					        ctxt, watts_value,
 					        nrm_numa_scopes[numa_id]);
-
 				} else {
-					hwloc_bitmap_foreach_begin(
-					        cpu, cpu_sets[numa_id])
-					        cpu_idx = get_cpu_idx(topology,
-					                              cpu);
 					nrm_send_progress(
 					        ctxt, watts_value,
-					        nrm_cpu_scopes[cpu_idx]);
-					hwloc_bitmap_foreach_end();
+					        nrm_cpu_scopes[numa_id]);
 				}
 				verbose("%-45s%4.2f J (Average Power %.2fW)\n",
 				        EventNames[i], (double)event_values[i],
@@ -317,44 +325,42 @@ int main(int argc, char **argv)
 			}
 		}
 	} while (!stop);
-	//
+
 	int papi_status;
 	assert(PAPI_state(EventSet, &papi_status) == PAPI_OK);
 	if (papi_status == PAPI_RUNNING) {
 		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
 	}
-	//
-	// /* final send here */
+
+	/* final send here */
 	for (i = 0; i < num_events; i++) {
 		event = EventNames[i];
+
 		if (is_energy_event(event, DataTypes[i])) {
 			watts_value = get_watts(event_values[i], elapsed_time);
-			numa_id = parse_numa_id(event);
+			numa_id = parse_numa_id(event); // should match
+			                                // NUMANODE's logical ID
 
 			if (is_NUMA_event(event)) {
 				nrm_send_progress(ctxt, watts_value,
 				                  nrm_numa_scopes[numa_id]);
-
 			} else {
-				hwloc_bitmap_foreach_begin(cpu,
-				                           cpu_sets[numa_id])
-				        cpu_idx = get_cpu_idx(topology, cpu);
 				nrm_send_progress(ctxt, watts_value,
-				                  nrm_cpu_scopes[cpu_idx]);
-				hwloc_bitmap_foreach_end();
+				                  nrm_cpu_scopes[numa_id]);
 			}
 		}
 	}
+
 	verbose("Finalized PAPI-event read/send to NRM.\n");
 
 	nrm_fini(ctxt);
 	verbose("Finalized NRM context.\n");
 
-	for (i = 0; i < MAX_CPU_scopes; i++) {
+	for (i = 0; i < MAX_measurements; i++) {
 		nrm_scope_delete(nrm_cpu_scopes[i]);
 	}
 
-	for (i = 0; i < MAX_NUMA_scopes; i++) {
+	for (i = 0; i < MAX_measurements; i++) {
 		nrm_scope_delete(nrm_numa_scopes[i]);
 	}
 
