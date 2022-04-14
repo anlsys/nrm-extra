@@ -64,7 +64,7 @@ void logging(
 #define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
 #define MAX_powercap_EVENTS 128
-#define MAX_measurements 8
+#define MAX_MEASUREMENTS 8
 
 // handler for interrupt?
 void interrupt(int signum)
@@ -218,10 +218,10 @@ int main(int argc, char **argv)
 
 	hwloc_topology_t topology;
 	hwloc_obj_t numanode;
-	hwloc_cpuset_t cpus, cpu_sets[MAX_measurements];
+	hwloc_cpuset_t cpus;
 
-	nrm_scope_t *nrm_cpu_scopes[MAX_measurements],
-	        *nrm_numa_scopes[MAX_measurements];
+	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS],
+	        *nrm_numa_scopes[MAX_MEASUREMENTS];
 	int n_energy_events = 0, n_scopes = 0, n_numa_scopes = 0,
 	    n_cpu_scopes = 0, cpu_idx, cpu, numa_id;
 	char *event;
@@ -356,11 +356,11 @@ int main(int argc, char **argv)
 	nrm_fini(ctxt);
 	verbose("Finalized NRM context.\n");
 
-	for (i = 0; i < MAX_measurements; i++) {
+	for (i = 0; i < MAX_MEASUREMENTS; i++) {
 		nrm_scope_delete(nrm_cpu_scopes[i]);
 	}
 
-	for (i = 0; i < MAX_measurements; i++) {
+	for (i = 0; i < MAX_MEASUREMENTS; i++) {
 		nrm_scope_delete(nrm_numa_scopes[i]);
 	}
 

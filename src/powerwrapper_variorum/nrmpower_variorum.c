@@ -32,6 +32,7 @@
 #include <variorum.h>
 
 #include <nrm.h>
+#include <hwloc.h>
 
 static int log_level = 0;
 volatile sig_atomic_t stop;
@@ -68,6 +69,13 @@ void interrupt(int signum)
 {
 	verbose("Interrupt caught. Exiting loop.\n");
 	stop = 1;
+}
+
+int get_cpu_idx(hwloc_topology_t topology, int cpu)
+{
+	hwloc_obj_t pu;
+	pu = hwloc_get_pu_obj_by_os_index(topology, cpu);
+	return pu->logical_index;
 }
 
 int main(int argc, char **argv)
@@ -115,37 +123,49 @@ int main(int argc, char **argv)
 	// without delta, watts values should all be zero
 	// but since we're not reporting yet, that's ok
 	assert(variorum_get_node_power_json(json_measurements) == 0);
-	verbose("Variorum first measurement performed. Detecting candidate fields.\n");
+	verbose("Variorum first measurement performed. Detecting candidate fields and system topology.\n");
 
-	nrm_scope_t *nrm_scopes[MAX_MEASUREMENTS];
-	int i = 0, nrm_tot_scopes = 0, nrm_type = -1;
+	hwloc_topology_t topology;
+	hwloc_obj_t numanode;
+	hwloc_cpuset_t cpus;
+
+	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS], *nrm_numa_scopes[MAX_MEASUREMENTS];
+	int i, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0, cpu_idx, cpu, numa_id;
 	const char *key;
 	json_t *value;
+
+	assert(hwloc_topology_init(&topology) == 0);
+	assert(hwloc_topology_load(topology) == 0);
 
 	json_object_foreach(json_measurements, key, value)
 	{
 		// variorum inits un-measureable as -1.0, measureable as 0.0
 		if (strstr(key, "socket") && (json_real_value(value) != -1.0)) {
 			scope = nrm_scope_create();
-			nrm_scope_threadshared(scope);
+      numa_id = key[sizeof(key)-1] - '0';
 
-			if (strstr(key, "power_cpu_watts")) {
-				nrm_type = NRM_SCOPE_TYPE_CPU;
+			if (strstr(key, "power_cpu_watts")) {  // need NUMANODE object to parse CPU indexes
+				numanode = hwloc_get_obj_by_type(topology, HWLOC_OBJ_NUMANODE, numa_id);
+				cpus = numanode->cpuset;
+
+				hwloc_bitmap_foreach_begin(cpu, cpus)
+	        cpu_idx = get_cpu_idx(topology, cpu);
+          nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,cpu_idx);
+				hwloc_bitmap_foreach_end();
+
+				nrm_cpu_scopes[numa_id] = scope;
+				n_cpu_scopes++;
+
 			} else if (strstr(key, "power_mem_watts")) {
-				nrm_type = NRM_SCOPE_TYPE_NUMA;
-			} else if (strstr(key, "power_gpu_watts")) {
-				nrm_type = NRM_SCOPE_TYPE_GPU;
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, numa_id);
+				nrm_numa_scopes[numa_id] = scope;
+				n_numa_scopes++;
 			}
-
-			nrm_scope_add(scope, nrm_type, i);
-			nrm_scopes[i] = scope;
-			i++;
+      n_scopes++;
 		}
 	}
-	nrm_tot_scopes = i;
 
-	verbose("%d Candidate socket fields detected. NRM scopes initialized.\n",
-	        nrm_tot_scopes);
+	verbose("%d Candidate socket fields detected. NRM scopes initialized.\n", n_scopes);
 
 	// loop until ctrl+c interrupt?
 	stop = 0;
@@ -165,17 +185,19 @@ int main(int argc, char **argv)
 
 		assert(variorum_get_node_power_json(json_measurements) == 0);
 
-		i = 0;
-		json_object_foreach(json_measurements, key, value)
-		{
-			// should match each nrm scope created earlier
-			if (strstr(key, "socket") &&
-			    (json_real_value(value) != -1.0)) {
-				nrm_send_progress(ctxt, json_real_value(value),
-				                  nrm_scopes[i]);
-				i++;
-			}
-		}
+  	json_object_foreach(json_measurements, key, value) {
+  		// variorum inits un-measureable as -1.0, measureable as 0.0
+  		if (strstr(key, "socket") && (json_real_value(value) != -1.0)) {
+        numa_id = key[sizeof(key)-1] - '0';
+
+  			if (strstr(key, "power_cpu_watts")) {
+					nrm_send_progress(ctxt, json_real_value(value), nrm_cpu_scopes[numa_id]);
+
+  			} else if (strstr(key, "power_mem_watts")) {
+					nrm_send_progress(ctxt, json_real_value(value), nrm_numa_scopes[numa_id]);
+  			}
+  		}
+  	}
 
 		// Some verbose output just to look at numbers
 		if (log_level >= 1) {
@@ -192,9 +214,14 @@ int main(int argc, char **argv)
 	nrm_fini(ctxt);
 	verbose("Finalized NRM context.\n");
 
-	for (i = 0; i < nrm_tot_scopes; i++) {
-		nrm_scope_delete(nrm_scopes[i]);
+	for (i = 0; i < MAX_MEASUREMENTS; i++) {
+		nrm_scope_delete(nrm_cpu_scopes[i]);
 	}
+
+	for (i = 0; i < MAX_MEASUREMENTS; i++) {
+		nrm_scope_delete(nrm_numa_scopes[i]);
+	}
+
 	verbose("NRM scopes deleted.\n");
 
 	nrm_ctxt_delete(ctxt);
