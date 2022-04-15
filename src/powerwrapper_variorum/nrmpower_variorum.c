@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 	        *nrm_numa_scopes[MAX_MEASUREMENTS];
 	int i, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0, cpu_idx, cpu,
 	       numa_id;
-	const char *key;
+	const char *key, *json_soutput;
 	json_t *value;
 
 	assert(hwloc_topology_init(&topology) == 0);
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 		// variorum inits un-measureable as -1.0, measureable as 0.0
 		if (strstr(key, "socket") && (json_real_value(value) != -1.0)) {
 			scope = nrm_scope_create();
-			numa_id = key[sizeof(key) - 1] - '0';
+			numa_id = key[strlen(key) - 1] - '0';
 
 			if (strstr(key, "power_cpu_watts")) { // need NUMANODE
 				                              // object to parse
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 			// 0.0
 			if (strstr(key, "socket") &&
 			    (json_real_value(value) != -1.0)) {
-				numa_id = key[sizeof(key) - 1] - '0';
+				numa_id = key[strlen(key) - 1] - '0';
 
 				if (strstr(key, "power_cpu_watts")) {
 					nrm_send_progress(
@@ -216,11 +216,9 @@ int main(int argc, char **argv)
 
 		// Some verbose output just to look at numbers
 		if (log_level >= 1) {
-			char *json_soutput =
-			        json_dumps(json_measurements, JSON_INDENT(4));
+			json_soutput = json_dumps(json_measurements, JSON_INDENT(4));
 			verbose("Variorum energy measurements:\n");
 			verbose("%s\n", json_soutput);
-			free(json_soutput);
 		}
 	} while (!stop);
 
@@ -229,11 +227,11 @@ int main(int argc, char **argv)
 	nrm_fini(ctxt);
 	verbose("Finalized NRM context.\n");
 
-	for (i = 0; i < MAX_MEASUREMENTS; i++) {
+	for (i = 0; i < n_cpu_scopes; i++) {
 		nrm_scope_delete(nrm_cpu_scopes[i]);
 	}
 
-	for (i = 0; i < MAX_MEASUREMENTS; i++) {
+	for (i = 0; i < n_numa_scopes; i++) {
 		nrm_scope_delete(nrm_numa_scopes[i]);
 	}
 
