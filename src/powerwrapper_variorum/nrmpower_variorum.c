@@ -147,8 +147,8 @@ int main(int argc, char **argv)
 			numa_id = key[strlen(key) - 1] - '0';
 
 			if (strstr(key, "power_cpu_watts")) { // need NUMANODE
-				                              // object to parse
-				                              // CPU indexes
+				// object to parse
+				// CPU indexes
 				numanode = hwloc_get_obj_by_type(
 				        topology, HWLOC_OBJ_NUMANODE, numa_id);
 				cpus = numanode->cpuset;
@@ -172,8 +172,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	verbose("%d Candidate socket fields detected. NRM scopes initialized.\n",
-	        n_scopes);
+	verbose("%i Candidate socket fields detected. (%i CPU, %i NUMA) NRM scopes initialized.\n",
+	        n_scopes, n_cpu_scopes, n_numa_scopes);
 
 	// loop until ctrl+c interrupt?
 	stop = 0;
@@ -216,7 +216,8 @@ int main(int argc, char **argv)
 
 		// Some verbose output just to look at numbers
 		if (log_level >= 1) {
-			json_soutput = json_dumps(json_measurements, JSON_INDENT(4));
+			json_soutput =
+			        json_dumps(json_measurements, JSON_INDENT(4));
 			verbose("Variorum energy measurements:\n");
 			verbose("%s\n", json_soutput);
 		}
