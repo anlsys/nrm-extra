@@ -2,6 +2,6 @@
 stdenv.mkDerivation {
   src = ../.;
   name = "nrm-extra";
-  nativeBuildInputs = [ autoreconfHook pkgconfig libnrm mpich2 openmp papi ];
+  nativeBuildInputs = [ autoreconfHook pkgconfig libnrm mpich2 openmp papi jansson ];
   buildInputs = [ gfortran ] ++ libnrm.buildInputs;
 }
