@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev hwloc
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev hwloc-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -30,7 +30,7 @@ jobs:
         run: |
           git clone https://github.com/anlsys/variorum.git
           cd variorum; mkdir build; cd build
-          cmake -DENABLE_MPI=OFF ../src
+          cmake -DENABLE_MPI=OFF -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
           make -j 4
           make install
       - uses: actions/checkout@v2
@@ -43,8 +43,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          export PATH=$PAPI_DIR/bin:$PATH
-          export LD_LIBRARY_PATH=$PAPI_DIR/lib:$LD_LIBRARY_PATH
+          export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
           ./configure --prefix=`pwd`/build
       - name: make
         run: |
@@ -84,7 +83,7 @@ jobs:
         run: |
           git clone https://github.com/anlsys/variorum.git
           cd variorum; mkdir build; cd build
-          cmake -DENABLE_MPI=OFF ../src
+          cmake -DENABLE_MPI=OFF -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
           make -j 4
           make install
       - uses: actions/checkout@v2
@@ -129,7 +128,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev hwloc
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev hwloc-dev
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -145,7 +144,7 @@ jobs:
         run: |
           git clone https://github.com/anlsys/variorum.git
           cd variorum; mkdir build; cd build
-          cmake -DENABLE_MPI=OFF ../src
+          cmake -DENABLE_MPI=OFF -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
           make -j 4
           make install
       - uses: actions/checkout@v2
