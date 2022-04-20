@@ -39,6 +39,8 @@ jobs:
           path: nrm-extra
       - name: configure
         run: |
+          export VARIORUM_CFLAGS=-I$GITHUB_WORKSPACE/$INSTALL_PATH/include
+          export VARIORUM_LIBS="-L$GITHUB_WORKSPACE/$INSTALL_PATH/lib -lvariorum"
           export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
           cd nrm-extra
           ./autogen.sh
@@ -91,6 +93,8 @@ jobs:
           path: nrm-extra
       - name: configure
         run: |
+          export VARIORUM_CFLAGS=-I$GITHUB_WORKSPACE/$INSTALL_PATH/include
+          export VARIORUM_LIBS="-L$GITHUB_WORKSPACE/$INSTALL_PATH/lib -lvariorum"
           export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
           cd nrm-extra
           ./autogen.sh
