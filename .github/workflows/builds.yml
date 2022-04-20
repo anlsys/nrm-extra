@@ -30,9 +30,9 @@ jobs:
         run: |
           git clone https://github.com/anlsys/variorum.git
           cd variorum; mkdir build; cd build
-          cmake -DENABLE_MPI=OFF -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
+          cmake -DENABLE_MPI=OFF -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
           make -j 4
-          make install
+          sudo make install
       - uses: actions/checkout@v2
         with:
           submodules: true
@@ -83,9 +83,9 @@ jobs:
         run: |
           git clone https://github.com/anlsys/variorum.git
           cd variorum; mkdir build; cd build
-          cmake -DENABLE_MPI=OFF -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
+          cmake -DENABLE_MPI=OFF -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
           make -j 4
-          make install
+          sudo make install
       - uses: actions/checkout@v2
         with:
           path: nrm-extra
@@ -144,9 +144,9 @@ jobs:
         run: |
           git clone https://github.com/anlsys/variorum.git
           cd variorum; mkdir build; cd build
-          cmake -DENABLE_MPI=OFF -DCMAKE_PREFIX_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
+          cmake -DENABLE_MPI=OFF -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/$INSTALL_PATH ../src
           make -j 4
-          make install
+          sudo make install
       - uses: actions/checkout@v2
         with:
           path: nrm-extra
