@@ -168,6 +168,8 @@ jobs:
           cd nrm-extra
           export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
           export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
+          export VARIORUM_CFLAGS=-I$GITHUB_WORKSPACE/$INSTALL_PATH/include
+          export VARIORUM_LIBS="-L$GITHUB_WORKSPACE/$INSTALL_PATH/lib -lvariorum"
           make distcheck
       - uses: actions/upload-artifact@v2
         if: failure()
