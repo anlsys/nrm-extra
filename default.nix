@@ -3,5 +3,6 @@
 pkgs // rec {
   stdenv = pkgs.llvmPackages_12.stdenv;
   libnrm = pkgs.callPackage ./nix/libnrm.nix { };
-  nrm-extra = pkgs.callPackage ./nix/nrm-extra.nix { inherit libnrm; openmp = pkgs.llvmPackages_12.openmp; };
+  variorum = pkgs.callPackage ./nix/variorum.nix { };
+  nrm-extra = pkgs.callPackage ./nix/nrm-extra.nix { inherit libnrm; inherit variorum; openmp = pkgs.llvmPackages_12.openmp; };
 }

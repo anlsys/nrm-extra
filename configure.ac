@@ -22,6 +22,9 @@ AC_TYPE_INTPTR_T
 
 PKG_CHECK_MODULES([LIBNRM],[libnrm])
 PKG_CHECK_MODULES([PAPI],[papi])
+PKG_CHECK_MODULES([VARIORUM],[variorum])
+PKG_CHECK_MODULES([JANSSON], [jansson])
+PKG_CHECK_MODULES([HWLOC], [hwloc])
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_OPENMP
@@ -50,6 +53,8 @@ AC_CONFIG_FILES([Makefile
 		 src/mpi/Makefile
 		 src/omp/Makefile
 		 src/perfwrapper/Makefile
+         src/powerwrapper_papi/Makefile
+         src/powerwrapper_variorum/Makefile
 		 ctests/Makefile
 		 ctests/mpi/Makefile
 		 ctests/omp/Makefile
