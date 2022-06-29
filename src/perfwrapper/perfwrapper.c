@@ -31,9 +31,9 @@
 
 #include <nrm.h>
 
-static struct nrm_client_t *client;
-static struct nrm_scope *scope;
-static struct nrm_sensor_t *sensor;
+static nrm_client_t *client;
+static nrm_scope_t *scope;
+static nrm_sensor_t *sensor;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -122,8 +122,8 @@ int main(int argc, char **argv)
   sensor = nrm_sensor_create(name);
 
   //client add scope, sensor
-  assert(nrm_client_add_scope(&client, &scope) == 0);
-  assert(nrm_client_add_sensor(&client, &sensor) == 0);
+  assert(nrm_client_add_scope(client, scope) == 0);
+  assert(nrm_client_add_sensor(client, sensor) == 0);
 
 	// initialize PAPI
 	int papi_retval;
@@ -209,7 +209,7 @@ int main(int argc, char **argv)
 
     	nrm_time_gettime(&time);
 
-    	nrm_client_send_event(&client, time, &sensor, &scope, counter);
+        nrm_client_send_event(client, time, sensor, scope, counter);
 
 		/* loop until child exits */
 		int status;
@@ -223,11 +223,11 @@ int main(int argc, char **argv)
 
 	/* final send here */
 	PAPI_stop(EventSet, &counter);
-	nrm_client_send_event(&client, time, &sensor, &scope, counter);
+	nrm_client_send_event(client, time, sensor, scope, counter);
 
 	nrm_log_debug("Finalizing NRM context. Exiting.\n");
 	/* finalize program */
-	nrm_client_destroy(client);
+	nrm_client_destroy(&client);
   nrm_finalize();
 	exit(EXIT_SUCCESS);
 }
