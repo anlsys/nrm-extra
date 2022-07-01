@@ -98,6 +98,19 @@ int main(int argc, char **argv)
 		}
 	}
 
+	assert(nrm_log_init(stderr, "perfwrapper") == 0);
+	nrm_log_setlevel(NRM_LOG_DEBUG);
+	nrm_log_debug("NRM logging initialized.\n");
+
+  // create client
+	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
+
+	nrm_log_debug("NRM client initialized.\n");
+
+	assert(client != NULL);
+	nrm_init(NULL, NULL);
+	nrm_log_debug("NRM context initialized.\n");
+
 	nrm_log_debug("verbose=%d; freq=%f; event=%s\n", log_level, freq,
 	        EventCodeStr);
 
@@ -105,12 +118,6 @@ int main(int argc, char **argv)
 		nrm_log_error("Expected command after options.\n");
 		exit(EXIT_FAILURE);
 	}
-
-  // create client
-	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
-	assert(client != NULL);
-	nrm_init(NULL, NULL);
-	nrm_log_debug("NRM context initialized.\n");
 
   // create scope
 	scope = nrm_scope_create();
