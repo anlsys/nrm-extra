@@ -76,6 +76,9 @@ int main(int argc, char **argv)
 		switch (c) {
 		case 0:
 			break;
+		case 'v':
+			log_level = NRM_LOG_DEBUG;
+			break;
 		case 'f':
 			errno = 0;
 			freq = strtod(optarg, NULL);
@@ -101,13 +104,13 @@ int main(int argc, char **argv)
 	nrm_init(NULL, NULL);
 	assert(nrm_log_init(stderr, "perfwrapper") == 0);
 
-	nrm_log_setlevel(NRM_LOG_DEBUG);
+	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
 
     // create client
 	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
 
-	nrm_log_debug("NRM client initialized.\n");
+    nrm_log_debug("NRM client initialized.\n");
 
 	assert(client != NULL);
 	
@@ -121,18 +124,17 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-  // create scope
+    // create scope
 	scope = nrm_scope_create();
-	nrm_scope_threadshared(scope);
 	nrm_log_debug("NRM scope initialized.\n");
 
-  // create sensor
-  char *name = "perf-wrap";
-  sensor = nrm_sensor_create(name);
+    // create sensor
+    char *name = "perf-wrap";
+    sensor = nrm_sensor_create(name);
 
-  //client add scope, sensor
-  assert(nrm_client_add_scope(client, scope) == 0);
-  assert(nrm_client_add_sensor(client, sensor) == 0);
+    //client add scope, sensor
+    assert(nrm_client_add_scope(client, scope) == 0);
+    assert(nrm_client_add_sensor(client, sensor) == 0);
 
 	// initialize PAPI
 	int papi_retval;
@@ -215,10 +217,13 @@ int main(int argc, char **argv)
 			       PAPI_strerror(err));
 			exit(EXIT_FAILURE);
 		}
+        nrm_log_debug("PAPI counter read.\n");
 
-    	nrm_time_gettime(&time);
+        nrm_time_gettime(&time);
+        nrm_log_debug("NRM time obtained.\n");
 
         nrm_client_send_event(client, time, sensor, scope, counter);
+        nrm_log_debug("NRM counter values sent.\n");
 
 		/* loop until child exits */
 		int status;
