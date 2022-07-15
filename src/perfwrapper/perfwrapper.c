@@ -49,7 +49,6 @@ char *usage =
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
-
 int main(int argc, char **argv)
 {
 	int c, err;
@@ -83,7 +82,9 @@ int main(int argc, char **argv)
 			errno = 0;
 			freq = strtod(optarg, NULL);
 			if (errno != 0 || freq == 0) {
-				nrm_log_error("Error during conversion to double: %d\n", errno);
+				nrm_log_error(
+				        "Error during conversion to double: %d\n",
+				        errno);
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -107,34 +108,34 @@ int main(int argc, char **argv)
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
 
-    // create client
+	// create client
 	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
 
-    nrm_log_debug("NRM client initialized.\n");
+	nrm_log_debug("NRM client initialized.\n");
 
 	assert(client != NULL);
-	
+
 	nrm_log_debug("NRM context initialized.\n");
 
 	nrm_log_debug("verbose=%d; freq=%f; event=%s\n", log_level, freq,
-	        EventCodeStr);
+	              EventCodeStr);
 
 	if (optind >= argc) {
 		nrm_log_error("Expected command after options.\n");
 		exit(EXIT_FAILURE);
 	}
 
-    // create scope
+	// create scope
 	scope = nrm_scope_create();
 	nrm_log_debug("NRM scope initialized.\n");
 
-    // create sensor
-    char *name = "perf-wrap";
-    sensor = nrm_sensor_create(name);
+	// create sensor
+	char *name = "perf-wrap";
+	sensor = nrm_sensor_create(name);
 
-    //client add scope, sensor
-    assert(nrm_client_add_scope(client, scope) == 0);
-    assert(nrm_client_add_sensor(client, sensor) == 0);
+	// client add scope, sensor
+	assert(nrm_client_add_scope(client, scope) == 0);
+	assert(nrm_client_add_sensor(client, sensor) == 0);
 
 	// initialize PAPI
 	int papi_retval;
@@ -142,7 +143,7 @@ int main(int argc, char **argv)
 
 	if (papi_retval != PAPI_VER_CURRENT) {
 		nrm_log_error("PAPI library init error: %s\n",
-		       PAPI_strerror(papi_retval));
+		              PAPI_strerror(papi_retval));
 		exit(EXIT_FAILURE);
 	}
 
@@ -154,19 +155,22 @@ int main(int argc, char **argv)
 	err = PAPI_event_name_to_code(EventCodeStr, &EventCode);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI event_name translation error: %s\n",
-		       PAPI_strerror(err));
+		              PAPI_strerror(err));
 	}
 	err = PAPI_create_eventset(&EventSet);
 	if (err != PAPI_OK) {
-		nrm_log_error("PAPI eventset creation error: %s\n",  PAPI_strerror(err));
+		nrm_log_error("PAPI eventset creation error: %s\n",
+		              PAPI_strerror(err));
 	}
 
 	err = PAPI_add_event(EventSet, EventCode);
 	if (err != PAPI_OK) {
-		nrm_log_error("PAPI eventset append error: %s\n",  PAPI_strerror(err));
+		nrm_log_error("PAPI eventset append error: %s\n",
+		              PAPI_strerror(err));
 	}
 
-	nrm_log_debug("PAPI code string %s converted to PAPI code %i, and registered.\n",
+	nrm_log_debug(
+	        "PAPI code string %s converted to PAPI code %i, and registered.\n",
 	        EventCodeStr, EventCode);
 
 	/* launch? command, sample counters */
@@ -179,20 +183,22 @@ int main(int argc, char **argv)
 	} else if (pid == 0) {
 		/* child, needs to exec the cmd */
 		err = execvp(argv[optind], &argv[optind]);
-		nrm_log_error("error executing command: %s\n",  PAPI_strerror(errno));
+		nrm_log_error("error executing command: %s\n",
+		              PAPI_strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
 	/* us, need to sample counters */
 	err = PAPI_attach(EventSet, pid);
 	if (err != PAPI_OK) {
-		nrm_log_error("PAPI eventset attach error: %s\n",  PAPI_strerror(err));
+		nrm_log_error("PAPI eventset attach error: %s\n",
+		              PAPI_strerror(err));
 	}
 	nrm_log_debug("PAPI attached to process with pid %i\n", pid);
 
 	err = PAPI_start(EventSet);
 	if (err != PAPI_OK) {
-		nrm_log_error("PAPI start error: %s\n",  PAPI_strerror(err));
+		nrm_log_error("PAPI start error: %s\n", PAPI_strerror(err));
 	}
 	nrm_log_debug("PAPI started. Initializing event read/send to NRM\n");
 
@@ -214,22 +220,23 @@ int main(int argc, char **argv)
 		err = PAPI_read(EventSet, &counter);
 		if (err != PAPI_OK) {
 			nrm_log_error("PAPI event read error: %s\n",
-			       PAPI_strerror(err));
+			              PAPI_strerror(err));
 			exit(EXIT_FAILURE);
 		}
-        nrm_log_debug("PAPI counter read.\n");
+		nrm_log_debug("PAPI counter read.\n");
 
-        nrm_time_gettime(&time);
-        nrm_log_debug("NRM time obtained.\n");
+		nrm_time_gettime(&time);
+		nrm_log_debug("NRM time obtained.\n");
 
-        nrm_client_send_event(client, time, sensor, scope, counter);
-        nrm_log_debug("NRM counter values sent.\n");
+		nrm_client_send_event(client, time, sensor, scope, counter);
+		nrm_log_debug("NRM counter values sent.\n");
 
 		/* loop until child exits */
 		int status;
 		err = waitpid(pid, &status, WNOHANG);
 		if (err == -1) {
-			nrm_log_error("error during wait: %s\n", strerror(errno));
+			nrm_log_error("error during wait: %s\n",
+			              strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 	} while (err != pid);
@@ -242,6 +249,6 @@ int main(int argc, char **argv)
 	nrm_log_debug("Finalizing NRM context. Exiting.\n");
 	/* finalize program */
 	nrm_client_destroy(&client);
-  nrm_finalize();
+	nrm_finalize();
 	exit(EXIT_SUCCESS);
 }
