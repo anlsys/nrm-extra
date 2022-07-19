@@ -52,7 +52,7 @@ char *usage =
 int main(int argc, char **argv)
 {
 	int c, err;
-	double freq = 10;
+	double freq = 1;
 	char EventCodeStr[PAPI_MAX_STR_LEN] = "PAPI_TOT_INS";
 	char EventDescr[PAPI_MAX_STR_LEN];
 	char EventLabel[20];
@@ -114,8 +114,6 @@ int main(int argc, char **argv)
 	nrm_log_debug("NRM client initialized.\n");
 
 	assert(client != NULL);
-
-	nrm_log_debug("NRM context initialized.\n");
 
 	nrm_log_debug("verbose=%d; freq=%f; event=%s\n", log_level, freq,
 	              EventCodeStr);
@@ -246,7 +244,6 @@ int main(int argc, char **argv)
 	PAPI_stop(EventSet, &counter);
 	nrm_client_send_event(client, time, sensor, scope, counter);
 
-	nrm_log_debug("Finalizing NRM context. Exiting.\n");
 	/* finalize program */
 	nrm_client_destroy(&client);
 	nrm_finalize();
