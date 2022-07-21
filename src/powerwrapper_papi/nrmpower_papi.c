@@ -48,7 +48,6 @@ static int rpc_port = 3456;
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
-        "            -f, --frequency         Frequency in hz to poll. Default: 1.0\n"
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
@@ -107,12 +106,11 @@ int main(int argc, char **argv)
 	while (1) {
 		static struct option long_options[] = {
 		        {"verbose", no_argument, &log_level, 1},
-		        {"frequency", optional_argument, 0, 'f'},
 		        {"help", no_argument, 0, 'h'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "+vf:m:h", long_options,
+		char_opt = getopt_long(argc, argv, "vh", long_options,
 		                       &option_index);
 
 		if (char_opt == -1)
@@ -122,16 +120,6 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
-			break;
-		case 'f':
-			errno = 0;
-			freq = strtod(optarg, NULL);
-			if (errno != 0 || freq == 0) {
-				nrm_log_error(
-				        "Error during conversion to double: %s\n",
-				        errno);
-				exit(EXIT_FAILURE);
-			}
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);

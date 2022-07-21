@@ -37,8 +37,13 @@
 static int log_level = 0;
 volatile sig_atomic_t stop;
 
-static struct nrm_context *ctxt;
-static struct nrm_scope *scope;
+static nrm_client_t *client;
+static nrm_scope_t *scope;
+static nrm_sensor_t *sensor;
+
+static char *upstream_uri = "tcp://127.0.0.1";
+static int pub_port = 2345;
+static int rpc_port = 3456;
 
 char *usage =
         "usage: nrm-power [options] \n"
@@ -46,28 +51,12 @@ char *usage =
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
-void logging(
-        int level, const char *file, unsigned int line, const char *fmt, ...)
-{
-	if (level <= log_level) {
-		fprintf(stderr, "%s:\t%u:\t", file, line);
-		va_list ap;
-		va_start(ap, fmt);
-		vfprintf(stderr, fmt, ap);
-		va_end(ap);
-	}
-}
-
-#define normal(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
-#define verbose(...) logging(1, __FILE__, __LINE__, __VA_ARGS__)
-#define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
-
 #define MAX_MEASUREMENTS 16
 
 // handler for interrupt?
 void interrupt(int signum)
 {
-	verbose("Interrupt caught. Exiting loop.\n");
+	nrm_log_debug("Interrupt caught. Exiting loop.\n");
 	stop = 1;
 }
 
@@ -87,11 +76,6 @@ int main(int argc, char **argv)
 	// register callback handler for interrupt
 	signal(SIGINT, interrupt);
 
-	ctxt = nrm_ctxt_create();
-	assert(ctxt != NULL);
-	nrm_init(ctxt, "nrm-power", 0, 0);
-	verbose("NRM context initialized.\n");
-
 	// TODO: fix "-v" not being parsed as verbose
 	while (1) {
 		static struct option long_options[] = {
@@ -100,7 +84,7 @@ int main(int argc, char **argv)
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "+v:m:h", long_options,
+		char_opt = getopt_long(argc, argv, "vh", long_options,
 		                       &option_index);
 
 		if (char_opt == -1)
@@ -108,22 +92,43 @@ int main(int argc, char **argv)
 		switch (char_opt) {
 		case 0:
 			break;
+		case 'v':
+			log_level = NRM_LOG_DEBUG;
+			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
 			exit(EXIT_SUCCESS);
 		case '?':
 		default:
-			error("Wrong option argument\n");
-			error("%s", usage);
+			nrm_log_error("Wrong option argument\n");
+			nrm_log_error("%s", usage);
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	nrm_init(NULL, NULL);
+	assert(nrm_log_init(stderr, "nrmpower-variorum") == 0);
+
+	nrm_log_setlevel(log_level);
+	nrm_log_debug("NRM logging initialized.\n");
+
+	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
+	nrm_log_debug("NRM client initialized.\n");
+	assert(client != NULL);
+
+	// create sensor
+	char *name = "variorum-power";
+	sensor = nrm_sensor_create(name);
+
+	// client add sensor
+	assert(nrm_client_add_sensor(client, sensor) == 0);
 
 	// 1st measure, only to determine viable measurements
 	// without delta, watts values should all be zero
 	// but since we're not reporting yet, that's ok
 	assert(variorum_get_node_power_json(json_measurements) == 0);
-	verbose("Variorum first measurement performed. Detecting candidate fields and system topology.\n");
+	nrm_log_debug(
+	        "Variorum first measurement performed. Detecting candidate fields and system topology.\n");
 
 	hwloc_topology_t topology;
 	hwloc_obj_t numanode;
@@ -168,19 +173,27 @@ int main(int argc, char **argv)
 				nrm_numa_scopes[numa_id] = scope;
 				n_numa_scopes++;
 			}
+			nrm_client_add_scope(client, scope);
 			n_scopes++;
 		}
 	}
 
-	verbose("%i Candidate socket fields detected. (%i CPU, %i NUMA) NRM scopes initialized.\n",
+	nrm_log_debug(
+	        "%i Candidate socket fields detected. (%i CPU, %i NUMA) NRM scopes initialized.\n",
 	        n_scopes, n_cpu_scopes, n_numa_scopes);
 
 	// loop until ctrl+c interrupt?
 	stop = 0;
 	double sleeptime = 1;
 
-	verbose("Beginning loop. ctrl+c to exit.\n");
+	nrm_time_t before_time, after_time;
+	int64_t elapsed_time;
+
+	nrm_log_debug("Beginning loop. ctrl+c to exit.\n");
 	do {
+
+		nrm_time_gettime(&before_time);
+
 		/* sleep for a frequency */
 		struct timespec req, rem;
 		req.tv_sec = ceil(sleeptime);
@@ -190,6 +203,9 @@ int main(int argc, char **argv)
 			err = nanosleep(&req, &rem);
 			req = rem;
 		} while (err == -1 && errno == EINTR);
+
+		nrm_time_gettime(&after_time);
+		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
 		assert(variorum_get_node_power_json(json_measurements) == 0);
 
@@ -202,44 +218,37 @@ int main(int argc, char **argv)
 				numa_id = key[strlen(key) - 1] - '0';
 
 				if (strstr(key, "power_cpu_watts")) {
-					nrm_send_progress(
-					        ctxt, json_real_value(value),
-					        nrm_cpu_scopes[numa_id]);
-
+					scope = nrm_cpu_scopes[numa_id];
 				} else if (strstr(key, "power_mem_watts")) {
-					nrm_send_progress(
-					        ctxt, json_real_value(value),
-					        nrm_numa_scopes[numa_id]);
+					scope = nrm_numa_scopes[numa_id];
 				}
+				nrm_client_send_event(
+				        client, nrm_time_fromns(elapsed_time),
+				        sensor, scope, json_real_value(value));
 			}
 		}
 
 		// Some verbose output just to look at numbers
-		if (log_level >= 1) {
-			json_soutput =
-			        json_dumps(json_measurements, JSON_INDENT(4));
-			verbose("Variorum energy measurements:\n");
-			verbose("%s\n", json_soutput);
-		}
+		json_soutput = json_dumps(json_measurements, JSON_INDENT(4));
+		nrm_log_debug("Variorum energy measurements:\n");
+		nrm_log_debug("%s\n", json_soutput);
+
 	} while (!stop);
 
 	/* final send here */
 	/* finalize program */
-	nrm_fini(ctxt);
-	verbose("Finalized NRM context.\n");
 
 	for (i = 0; i < n_cpu_scopes; i++) {
-		nrm_scope_delete(nrm_cpu_scopes[i]);
+		nrm_scope_destroy(nrm_cpu_scopes[i]);
 	}
 
 	for (i = 0; i < n_numa_scopes; i++) {
-		nrm_scope_delete(nrm_numa_scopes[i]);
+		nrm_scope_destroy(nrm_numa_scopes[i]);
 	}
 
-	verbose("NRM scopes deleted.\n");
-
-	nrm_ctxt_delete(ctxt);
-	verbose("NRM context deleted. Exiting.\n");
+	nrm_log_debug("NRM scopes deleted.\n");
+	nrm_client_destroy(&client);
+	nrm_finalize();
 
 	exit(EXIT_SUCCESS);
 }
