@@ -52,8 +52,6 @@ char *usage =
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
-
-
 #define MAX_powercap_EVENTS 128
 #define MAX_MEASUREMENTS 8
 
@@ -77,7 +75,7 @@ bool is_NUMA_event(char *event_name)
 
 double get_watts(double event_value, int64_t elapsed_time)
 {
-	return ((double)event_value / 1.0e6) / elapsed_time;
+	return ((double)event_value / 1.0e6) / (elapsed_time / 1.0e9);
 }
 
 int parse_numa_id(char *event_name)
@@ -129,8 +127,9 @@ int main(int argc, char **argv)
 			errno = 0;
 			freq = strtod(optarg, NULL);
 			if (errno != 0 || freq == 0) {
-				nrm_log_error("Error during conversion to double: %s\n",
-				      errno);
+				nrm_log_error(
+				        "Error during conversion to double: %s\n",
+				        errno);
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -174,13 +173,15 @@ int main(int argc, char **argv)
 	for (component_id = 0; component_id < num_components; component_id++) {
 		if ((component_info = PAPI_get_component_info(component_id)) ==
 		    NULL) {
-			nrm_log_error("PAPI component identification failed: %s\n");
+			nrm_log_error(
+			        "PAPI component identification failed: %s\n");
 			exit(EXIT_FAILURE);
 		}
 
 		if (strstr(component_info->name, "powercap")) {
 			powercap_component_id = component_id;
-			nrm_log_debug("PAPI found powercap component at component_id %d\n",
+			nrm_log_debug(
+			        "PAPI found powercap component at component_id %d\n",
 			        powercap_component_id);
 			assert(!component_info->disabled);
 			break;
@@ -212,7 +213,7 @@ int main(int argc, char **argv)
 		assert(PAPI_event_code_to_name(
 		               EventCode, EventNames[num_events]) == PAPI_OK);
 		nrm_log_debug("code: %d, event: %s\n", EventCode,
-		        EventNames[num_events]);
+		              EventNames[num_events]);
 		assert(PAPI_get_event_info(EventCode, &EventInfo) == PAPI_OK);
 		DataTypes[num_events] = EventInfo.data_type;
 		assert(PAPI_add_event(EventSet, EventCode) == PAPI_OK);
@@ -245,17 +246,24 @@ int main(int argc, char **argv)
 			scope = nrm_scope_create();
 			numa_id = parse_numa_id(event); // should match
 			                                // NUMANODE's logical ID
+			nrm_log_debug("energy event detected.\n",
+			              n_energy_events);
 
 			if (is_NUMA_event(event)) {
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, numa_id);
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
+				              numa_id);
 				nrm_numa_scopes[numa_id] = scope;
 				n_numa_scopes++;
+				nrm_log_debug("NUMA energy event detected.\n",
+				              n_energy_events);
 
 			} else { // need NUMANODE object to parse CPU indexes
 				numanode = hwloc_get_obj_by_type(
 				        topology, HWLOC_OBJ_NUMANODE, numa_id);
 				cpus = numanode->cpuset;
 
+				// adds matching logical cpu indexes to cpu
+				// scope
 				hwloc_bitmap_foreach_begin(cpu, cpus)
 				        cpu_idx = get_cpu_idx(topology, cpu);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
@@ -264,15 +272,22 @@ int main(int argc, char **argv)
 
 				nrm_cpu_scopes[numa_id] = scope;
 				n_cpu_scopes++;
+				nrm_log_debug("CPU energy event detected.\n",
+				              n_energy_events);
 			}
+			nrm_log_debug("about to add scope to client.\n",
+			              n_energy_events);
 			nrm_client_add_scope(client, scope);
 			n_scopes++;
+			nrm_log_debug("new scope added to client.\n",
+			              n_energy_events);
 		}
 	}
 
-	nrm_log_debug("%d candidate energy events detected.\n", n_energy_events);
-	nrm_log_debug("%d NRM scopes initialized (%d NUMA and %d CPU)\n", n_scopes,
-	        n_numa_scopes, n_cpu_scopes);
+	nrm_log_debug("%d candidate energy events detected.\n",
+	              n_energy_events);
+	nrm_log_debug("%d NRM scopes initialized (%d NUMA and %d CPU)\n",
+	              n_scopes, n_numa_scopes, n_cpu_scopes);
 
 	long long *event_values;
 	nrm_time_t before_time, after_time;
@@ -292,8 +307,8 @@ int main(int argc, char **argv)
 
 		/* sleep for a frequency */
 		struct timespec req, rem;
-		req.tv_sec = floor(sleeptime);
-		req.tv_nsec = sleeptime * 1e9 - floor(sleeptime) * 1e9;
+		req.tv_sec = ceil(sleeptime);
+		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
 
 		do {
 			err = nanosleep(&req, &rem);
@@ -322,8 +337,11 @@ int main(int argc, char **argv)
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
 				}
-				nrm_client_send_event(client, nrm_time_fromns(elapsed_time), sensor, scope, watts_value);
-				nrm_log_debug("%-45s%4.2f J (Average Power %.2fW)\n",
+				nrm_client_send_event(
+				        client, nrm_time_fromns(elapsed_time),
+				        sensor, scope, watts_value);
+				nrm_log_debug(
+				        "%-45s%4.2f J (Average Power %.2fW)\n",
 				        EventNames[i], (double)event_values[i],
 				        watts_value);
 			}
@@ -350,7 +368,9 @@ int main(int argc, char **argv)
 			} else {
 				scope = nrm_cpu_scopes[numa_id];
 			}
-			nrm_client_send_event(client, nrm_time_fromns(elapsed_time), sensor, scope, watts_value);
+			nrm_client_send_event(client,
+			                      nrm_time_fromns(elapsed_time),
+			                      sensor, scope, watts_value);
 		}
 	}
 
