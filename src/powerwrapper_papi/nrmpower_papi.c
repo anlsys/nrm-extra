@@ -126,8 +126,8 @@ int main(int argc, char **argv)
 			exit(EXIT_SUCCESS);
 		case '?':
 		default:
-			nrm_log_error("Wrong option argument\n");
-			nrm_log_error("%s", usage);
+			fprintf(stderr, "Wrong option argument\n");
+			fprintf(stderr, "%s", usage);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -325,9 +325,9 @@ int main(int argc, char **argv)
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
 				}
-				nrm_client_send_event(
-				        client, nrm_time_fromns(elapsed_time),
-				        sensor, scope, watts_value);
+				nrm_client_send_event(client, after_time,
+				                      sensor, scope,
+				                      watts_value);
 				nrm_log_debug(
 				        "%-45s%4.2f J (Average Power %.2fW)\n",
 				        EventNames[i], (double)event_values[i],
@@ -356,9 +356,8 @@ int main(int argc, char **argv)
 			} else {
 				scope = nrm_cpu_scopes[numa_id];
 			}
-			nrm_client_send_event(client,
-			                      nrm_time_fromns(elapsed_time),
-			                      sensor, scope, watts_value);
+			nrm_client_send_event(client, after_time, sensor, scope,
+			                      watts_value);
 		}
 	}
 

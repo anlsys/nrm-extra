@@ -96,8 +96,8 @@ int main(int argc, char **argv)
 			exit(EXIT_SUCCESS);
 		case '?':
 		default:
-			nrm_log_error("Wrong option argument\n");
-			nrm_log_error("%s", usage);
+			fprintf(stderr, "Wrong option argument\n");
+			fprintf(stderr, "%s", usage);
 			exit(EXIT_FAILURE);
 		}
 	}
