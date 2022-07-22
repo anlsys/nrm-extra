@@ -37,31 +37,19 @@
 static int log_level = 0;
 volatile sig_atomic_t stop;
 
-static struct nrm_context *ctxt;
-static struct nrm_scope *scope;
+static nrm_client_t *client;
+static nrm_scope_t *scope;
+static nrm_sensor_t *sensor;
+
+static char *upstream_uri = "tcp://127.0.0.1";
+static int pub_port = 2345;
+static int rpc_port = 3456;
 
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
-        "            -f, --frequency         Frequency in hz to poll. Default: 1.0\n"
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
-
-void logging(
-        int level, const char *file, unsigned int line, const char *fmt, ...)
-{
-	if (level <= log_level) {
-		fprintf(stderr, "%s:\t%u:\t", file, line);
-		va_list ap;
-		va_start(ap, fmt);
-		vfprintf(stderr, fmt, ap);
-		va_end(ap);
-	}
-}
-
-#define normal(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
-#define verbose(...) logging(1, __FILE__, __LINE__, __VA_ARGS__)
-#define error(...) logging(0, __FILE__, __LINE__, __VA_ARGS__)
 
 #define MAX_powercap_EVENTS 128
 #define MAX_MEASUREMENTS 8
@@ -69,7 +57,7 @@ void logging(
 // handler for interrupt?
 void interrupt(int signum)
 {
-	verbose("Interrupt caught. Exiting loop.\n");
+	nrm_log_debug("Interrupt caught. Exiting loop.\n");
 	stop = 1;
 }
 
@@ -84,9 +72,9 @@ bool is_NUMA_event(char *event_name)
 	return (strstr(event_name, "SUBZONE"));
 }
 
-double get_watts(double event_value, double elapsed_time)
+double get_watts(double event_value, int64_t elapsed_time)
 {
-	return ((double)event_value / 1.0e6) / elapsed_time;
+	return ((double)event_value / 1.0e6) / (elapsed_time / 1.0e9);
 }
 
 int parse_numa_id(char *event_name)
@@ -114,21 +102,15 @@ int main(int argc, char **argv)
 	// register callback handler for interrupt
 	signal(SIGINT, interrupt);
 
-	ctxt = nrm_ctxt_create();
-	assert(ctxt != NULL);
-	nrm_init(ctxt, "nrm-power", 0, 0);
-	verbose("NRM context initialized.\n");
-
 	// TODO: fix "-v" not being parsed as verbose
 	while (1) {
 		static struct option long_options[] = {
 		        {"verbose", no_argument, &log_level, 1},
-		        {"frequency", optional_argument, 0, 'f'},
 		        {"help", no_argument, 0, 'h'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "+vf:m:h", long_options,
+		char_opt = getopt_long(argc, argv, "vh", long_options,
 		                       &option_index);
 
 		if (char_opt == -1)
@@ -136,28 +118,39 @@ int main(int argc, char **argv)
 		switch (char_opt) {
 		case 0:
 			break;
-		case 'f':
-			errno = 0;
-			freq = strtod(optarg, NULL);
-			if (errno != 0 || freq == 0) {
-				error("Error during conversion to double: %s\n",
-				      strerror(errno));
-				exit(EXIT_FAILURE);
-			}
+		case 'v':
+			log_level = NRM_LOG_DEBUG;
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
 			exit(EXIT_SUCCESS);
 		case '?':
 		default:
-			error("Wrong option argument\n");
-			error("%s", usage);
+			fprintf(stderr, "Wrong option argument\n");
+			fprintf(stderr, "%s", usage);
 			exit(EXIT_FAILURE);
 		}
 	}
 
+	nrm_init(NULL, NULL);
+	assert(nrm_log_init(stderr, "nrmpower-papi") == 0);
+
+	nrm_log_setlevel(log_level);
+	nrm_log_debug("NRM logging initialized.\n");
+
+	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
+	nrm_log_debug("NRM client initialized.\n");
+	assert(client != NULL);
+
+	// create sensor
+	char *name = "papi-power";
+	sensor = nrm_sensor_create(name);
+
+	// client add sensor
+	assert(nrm_client_add_sensor(client, sensor) == 0);
+
 	assert(PAPI_library_init(PAPI_VER_CURRENT) == PAPI_VER_CURRENT);
-	verbose("PAPI initialized.\n");
+	nrm_log_debug("PAPI initialized.\n");
 
 	/* Prepare to detect powercap PAPI component */
 	int component_id, powercap_component_id = -1, num_components;
@@ -168,13 +161,15 @@ int main(int argc, char **argv)
 	for (component_id = 0; component_id < num_components; component_id++) {
 		if ((component_info = PAPI_get_component_info(component_id)) ==
 		    NULL) {
-			error("PAPI component identification failed: %s\n");
+			nrm_log_error(
+			        "PAPI component identification failed: %s\n");
 			exit(EXIT_FAILURE);
 		}
 
 		if (strstr(component_info->name, "powercap")) {
 			powercap_component_id = component_id;
-			verbose("PAPI found powercap component at component_id %d\n",
+			nrm_log_debug(
+			        "PAPI found powercap component at component_id %d\n",
 			        powercap_component_id);
 			assert(!component_info->disabled);
 			break;
@@ -187,7 +182,7 @@ int main(int argc, char **argv)
 	assert(component_info->num_cntrs != 0); // Component has no hardware
 	                                        // counters
 	assert(PAPI_create_eventset(&EventSet) == PAPI_OK);
-	verbose("PAPI EventSet created\n");
+	nrm_log_debug("PAPI EventSet created\n");
 
 	int papi_retval, num_events = 0;
 	int EventCode = PAPI_NATIVE_MASK;
@@ -205,8 +200,8 @@ int main(int argc, char **argv)
 
 		assert(PAPI_event_code_to_name(
 		               EventCode, EventNames[num_events]) == PAPI_OK);
-		verbose("code: %d, event: %s\n", EventCode,
-		        EventNames[num_events]);
+		nrm_log_debug("code: %d, event: %s\n", EventCode,
+		              EventNames[num_events]);
 		assert(PAPI_get_event_info(EventCode, &EventInfo) == PAPI_OK);
 		DataTypes[num_events] = EventInfo.data_type;
 		assert(PAPI_add_event(EventSet, EventCode) == PAPI_OK);
@@ -239,18 +234,24 @@ int main(int argc, char **argv)
 			scope = nrm_scope_create();
 			numa_id = parse_numa_id(event); // should match
 			                                // NUMANODE's logical ID
+			nrm_log_debug("energy event detected.\n",
+			              n_energy_events);
 
 			if (is_NUMA_event(event)) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
 				              numa_id);
 				nrm_numa_scopes[numa_id] = scope;
 				n_numa_scopes++;
+				nrm_log_debug("NUMA energy event detected.\n",
+				              n_energy_events);
 
 			} else { // need NUMANODE object to parse CPU indexes
 				numanode = hwloc_get_obj_by_type(
 				        topology, HWLOC_OBJ_NUMANODE, numa_id);
 				cpus = numanode->cpuset;
 
+				// adds matching logical cpu indexes to cpu
+				// scope
 				hwloc_bitmap_foreach_begin(cpu, cpus)
 				        cpu_idx = get_cpu_idx(topology, cpu);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
@@ -259,18 +260,27 @@ int main(int argc, char **argv)
 
 				nrm_cpu_scopes[numa_id] = scope;
 				n_cpu_scopes++;
+				nrm_log_debug("CPU energy event detected.\n",
+				              n_energy_events);
 			}
+			nrm_log_debug("about to add scope to client.\n",
+			              n_energy_events);
+			nrm_client_add_scope(client, scope);
 			n_scopes++;
+			nrm_log_debug("new scope added to client.\n",
+			              n_energy_events);
 		}
 	}
 
-	verbose("%d candidate energy events detected.\n", n_energy_events);
-	verbose("%d NRM scopes initialized (%d NUMA and %d CPU)\n", n_scopes,
-	        n_numa_scopes, n_cpu_scopes);
+	nrm_log_debug("%d candidate energy events detected.\n",
+	              n_energy_events);
+	nrm_log_debug("%d NRM scopes initialized (%d NUMA and %d CPU)\n",
+	              n_scopes, n_numa_scopes, n_cpu_scopes);
 
-	long long before_time, after_time;
 	long long *event_values;
-	double elapsed_time, watts_value;
+	nrm_time_t before_time, after_time;
+	int64_t elapsed_time;
+	double watts_value;
 
 	event_values = calloc(num_events, sizeof(long long));
 
@@ -279,27 +289,27 @@ int main(int argc, char **argv)
 
 	do {
 
-		before_time = PAPI_get_real_nsec();
+		nrm_time_gettime(&before_time);
 
 		assert(PAPI_start(EventSet) == PAPI_OK);
 
 		/* sleep for a frequency */
 		struct timespec req, rem;
-		req.tv_sec = floor(sleeptime);
-		req.tv_nsec = sleeptime * 1e9 - floor(sleeptime) * 1e9;
+		req.tv_sec = ceil(sleeptime);
+		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
 
 		do {
 			err = nanosleep(&req, &rem);
 			req = rem;
 		} while (err == -1 && errno == EINTR);
 
-		after_time = PAPI_get_real_nsec();
-		elapsed_time = ((double)(after_time - before_time)) / 1.0e9;
+		nrm_time_gettime(&after_time);
+		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
 		// Stop and read EventSet measurements into "event_values"...
 		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
 
-		verbose("scaled energy measurements:\n");
+		nrm_log_debug("scaled energy measurements:\n");
 		for (i = 0; i < num_events; i++) {
 			event = EventNames[i];
 
@@ -311,15 +321,15 @@ int main(int argc, char **argv)
 				                                // logical ID
 
 				if (is_NUMA_event(event)) {
-					nrm_send_progress(
-					        ctxt, watts_value,
-					        nrm_numa_scopes[numa_id]);
+					scope = nrm_numa_scopes[numa_id];
 				} else {
-					nrm_send_progress(
-					        ctxt, watts_value,
-					        nrm_cpu_scopes[numa_id]);
+					scope = nrm_cpu_scopes[numa_id];
 				}
-				verbose("%-45s%4.2f J (Average Power %.2fW)\n",
+				nrm_client_send_event(client, after_time,
+				                      sensor, scope,
+				                      watts_value);
+				nrm_log_debug(
+				        "%-45s%4.2f J (Average Power %.2fW)\n",
 				        EventNames[i], (double)event_values[i],
 				        watts_value);
 			}
@@ -342,32 +352,27 @@ int main(int argc, char **argv)
 			                                // NUMANODE's logical ID
 
 			if (is_NUMA_event(event)) {
-				nrm_send_progress(ctxt, watts_value,
-				                  nrm_numa_scopes[numa_id]);
+				scope = nrm_numa_scopes[numa_id];
 			} else {
-				nrm_send_progress(ctxt, watts_value,
-				                  nrm_cpu_scopes[numa_id]);
+				scope = nrm_cpu_scopes[numa_id];
 			}
+			nrm_client_send_event(client, after_time, sensor, scope,
+			                      watts_value);
 		}
 	}
 
-	verbose("Finalized PAPI-event read/send to NRM.\n");
-
-	nrm_fini(ctxt);
-	verbose("Finalized NRM context.\n");
-
 	for (i = 0; i < MAX_MEASUREMENTS; i++) {
-		nrm_scope_delete(nrm_cpu_scopes[i]);
+		nrm_scope_destroy(nrm_cpu_scopes[i]);
 	}
 
 	for (i = 0; i < MAX_MEASUREMENTS; i++) {
-		nrm_scope_delete(nrm_numa_scopes[i]);
+		nrm_scope_destroy(nrm_numa_scopes[i]);
 	}
 
-	verbose("NRM scopes deleted.\n");
+	nrm_log_debug("NRM scopes deleted.\n");
 
-	nrm_ctxt_delete(ctxt);
-	verbose("NRM context deleted. Exiting.\n");
+	nrm_client_destroy(&client);
+	nrm_finalize();
 
 	exit(EXIT_SUCCESS);
 }
