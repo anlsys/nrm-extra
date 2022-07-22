@@ -34,8 +34,14 @@
 
 #include "nrm_mpi.h"
 
-static struct nrm_context *ctxt;
-static struct nrm_scope *scope;
+static nrm_client_t *client;
+static nrm_scope_t *scope;
+static nrm_sensor_t *sensor;
+nrm_time_t time;
+
+static char *upstream_uri = "tcp://127.0.0.1";
+static int pub_port = 2345;
+static int rpc_port = 3456;
 
 NRM_MPI_DECL(MPI_Allreduce,
              int,
@@ -47,21 +53,23 @@ NRM_MPI_DECL(MPI_Allreduce,
              MPI_Comm comm)
 {
 	NRM_MPI_RESOLVE(MPI_Allreduce);
-	nrm_send_progress(ctxt, 1, scope);
+	nrm_time_gettime(&time);
+	nrm_client_send_event(client, time, sensor, scope, 1);
 
 	int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
 	                           datatype, op, comm);
-	nrm_send_progress(ctxt, 1, scope);
+	nrm_client_send_event(client, time, sensor, scope, 1);
 	return ret;
 }
 
 NRM_MPI_DECL(MPI_Barrier, int, MPI_Comm comm)
 {
 	NRM_MPI_RESOLVE(MPI_Barrier);
-	nrm_send_progress(ctxt, 1, scope);
+	nrm_time_gettime(&time);
+	nrm_client_send_event(client, time, sensor, scope, 1);
 
 	int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
-	nrm_send_progress(ctxt, 1, scope);
+	nrm_client_send_event(client, time, sensor, scope, 1);
 
 	return ret;
 }
@@ -81,9 +89,9 @@ NRM_MPI_DECL(MPI_Comm_rank, int, MPI_Comm comm, int *rank)
 NRM_MPI_DECL(MPI_Finalize, int, void)
 {
 	NRM_MPI_RESOLVE(MPI_Finalize);
-	nrm_fini(ctxt);
-	nrm_scope_delete(scope);
-	nrm_ctxt_delete(ctxt);
+	nrm_finalize();
+	nrm_scope_destroy(&scope);
+	nrm_client_destroy(&client);
 	return NRM_MPI_REALNAME(MPI_Finalize);
 }
 
@@ -98,9 +106,14 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 
 	NRM_MPI_INNER_NAME(MPI_Comm_rank, MPI_COMM_WORLD, &rank);
 
-	ctxt = nrm_ctxt_create();
-	nrm_init(ctxt, "nrm-pmpi", rank, cpu);
+	nrm_init(NULL, NULL);
+	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
+
 	scope = nrm_scope_create();
 	nrm_scope_threadshared(scope);
+
+	char *name = "perf-wrap";
+	sensor = nrm_sensor_create(name);
+
 	return ret;
 }
