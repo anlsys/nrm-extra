@@ -16,8 +16,6 @@
 static ompt_start_tool_result_t nrm_ompt_start;
 ompt_set_callback_t nrm_ompt_set_callback;
 
-struct nrm_context *ctxt;
-nrm_scope_t *global_scope;
 
 int nrm_ompt_initialize(ompt_function_lookup_t lookup,
                         int initial_device_num,
@@ -25,15 +23,24 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 {
 	ompt_set_result_t ret;
 
-	/* initialize the NRM context */
-	ctxt = nrm_ctxt_create();
-	global_scope = nrm_scope_create();
-	assert(ctxt != NULL);
-
 	/* right now nrm ctxt need to know the rank and cpuid of the application
 	 * which is probably a mistake...we initialize it to 0 as a ugly fix.
 	 */
-	nrm_init(ctxt, "nrm-ompt", 0, 0);
+	nrm_init(NULL, NULL);
+
+	// initialize global client
+	nrm_client_create(&global_client, upstream_uri, pub_port, rpc_port);
+
+	// create global scope;
+	global_scope = nrm_scope_create();
+
+	// global sensor
+	char *name = "ompt_init";
+	global_sensor = nrm_sensor_create(name);
+
+	// add global scope and sensor to client, as usual
+	nrm_client_add_scope(global_client, global_scope);
+	nrm_client_add_sensor(global_client, global_sensor);
 
 	/* use the lookup function to retrieve a function pointer to
 	 * ompt_set_callback.
@@ -49,9 +56,9 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 
 void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
-	nrm_fini(ctxt);
-	nrm_scope_delete(global_scope);
-	nrm_ctxt_delete(ctxt);
+	nrm_scope_destroy(&global_scope);
+	nrm_client_destroy(&global_client);
+	nrm_finalize();
 	return;
 }
 
