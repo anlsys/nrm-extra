@@ -28,7 +28,6 @@
 #include <sched.h> // sched_getcpu
 #include <stdio.h> // printf
 #include <stdlib.h> // exit, atoi
-#include <time.h>
 
 #include "nrm.h"
 
@@ -37,7 +36,7 @@
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
-nrm_time_t time;
+nrm_time_t nrmtime;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -53,23 +52,23 @@ NRM_MPI_DECL(MPI_Allreduce,
              MPI_Comm comm)
 {
 	NRM_MPI_RESOLVE(MPI_Allreduce);
-	nrm_time_gettime(&time);
-	nrm_client_send_event(client, time, sensor, scope, 1);
+	nrm_time_gettime(&nrmtime);
+	nrm_client_send_event(client, nrmtime, sensor, scope, 1);
 
 	int ret = NRM_MPI_REALNAME(MPI_Allreduce, sendbuf, recvbuf, count,
 	                           datatype, op, comm);
-	nrm_client_send_event(client, time, sensor, scope, 1);
+	nrm_client_send_event(client, nrmtime, sensor, scope, 1);
 	return ret;
 }
 
 NRM_MPI_DECL(MPI_Barrier, int, MPI_Comm comm)
 {
 	NRM_MPI_RESOLVE(MPI_Barrier);
-	nrm_time_gettime(&time);
-	nrm_client_send_event(client, time, sensor, scope, 1);
+	nrm_time_gettime(&nrmtime);
+	nrm_client_send_event(client, nrmtime, sensor, scope, 1);
 
 	int ret = NRM_MPI_REALNAME(MPI_Barrier, comm);
-	nrm_client_send_event(client, time, sensor, scope, 1);
+	nrm_client_send_event(client, nrmtime, sensor, scope, 1);
 
 	return ret;
 }
