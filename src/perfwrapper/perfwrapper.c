@@ -245,7 +245,7 @@ int main(int argc, char **argv)
 	nrm_client_send_event(client, time, sensor, scope, counter);
 
 	/* finalize program */
-	nrm_scope_destroy(&scope);
+	nrm_scope_destroy(scope);
 	nrm_client_destroy(&client);
 	nrm_finalize();
 	exit(EXIT_SUCCESS);

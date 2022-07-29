@@ -89,7 +89,7 @@ NRM_MPI_DECL(MPI_Finalize, int, void)
 {
 	NRM_MPI_RESOLVE(MPI_Finalize);
 	nrm_finalize();
-	nrm_scope_destroy(&scope);
+	nrm_scope_destroy(scope);
 	nrm_client_destroy(&client);
 	return NRM_MPI_REALNAME(MPI_Finalize);
 }

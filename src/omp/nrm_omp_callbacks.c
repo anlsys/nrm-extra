@@ -3,6 +3,16 @@
 
 #include "nrm_omp.h"
 
+upstream_uri = "tcp://127.0.0.1";
+pub_port = 2345;
+rpc_port = 3456;
+
+nrm_client_create(&global_client, upstream_uri, pub_port, rpc_port);
+
+global_scope = nrm_scope_create();
+
+char *name = "nrm-omp";
+global_sensor = nrm_sensor_create(name);
 
 void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type,
                                        ompt_data_t *thread_data)
@@ -25,7 +35,7 @@ void nrm_ompt_callback_thread_end_cb(ompt_data_t *thread_data)
 
 	nrm_time_gettime(&nrmtime);
 	nrm_client_send_event(global_client, nrmtime, global_sensor, scope, 1);
-	nrm_scope_destroy(&scope);
+	nrm_scope_destroy(scope);
 	thread_data->ptr = NULL;
 }
 
