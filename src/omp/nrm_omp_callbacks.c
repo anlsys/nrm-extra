@@ -48,7 +48,8 @@ void nrm_ompt_callback_parallel_begin_cb(
         const void *codeptr_ra)
 {
 	nrm_time_gettime(&nrmtime);
-	nrm_client_send_event(global_client, nrmtime, global_sensor, global_scope, 1);
+	nrm_client_send_event(global_client, nrmtime, global_sensor,
+	                      global_scope, 1);
 }
 
 void nrm_ompt_callback_parallel_end_cb(ompt_data_t *parallel_data,
@@ -57,7 +58,8 @@ void nrm_ompt_callback_parallel_end_cb(ompt_data_t *parallel_data,
                                        const void *codeptr_ra)
 {
 	nrm_time_gettime(&nrmtime);
-	nrm_client_send_event(global_client, nrmtime, global_sensor, global_scope, 1);
+	nrm_client_send_event(global_client, nrmtime, global_sensor,
+	                      global_scope, 1);
 }
 
 void nrm_ompt_callback_work_cb(ompt_work_t wstype,

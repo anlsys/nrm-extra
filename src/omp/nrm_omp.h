@@ -12,6 +12,7 @@
 #define NRM_OMP_H 1
 
 #include <omp-tools.h>
+
 #include <nrm.h>
 
 #ifdef __cplusplus
