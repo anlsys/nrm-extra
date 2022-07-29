@@ -3,7 +3,6 @@
 
 #include "nrm_omp.h"
 
-nrm_time_t time;
 
 void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type,
                                        ompt_data_t *thread_data)
@@ -12,10 +11,11 @@ void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type,
 	thread_data->ptr = (void *)scope;
 
 	nrm_scope_threadprivate(scope);
+
 	nrm_scope_threadshared(global_scope);
 
-	nrm_time_gettime(&time);
-	nrm_client_send_event(global_client, time, global_sensor, scope, 1);
+	nrm_time_gettime(&nrmtime);
+	nrm_client_send_event(global_client, nrmtime, global_sensor, scope, 1);
 }
 
 void nrm_ompt_callback_thread_end_cb(ompt_data_t *thread_data)
@@ -23,9 +23,9 @@ void nrm_ompt_callback_thread_end_cb(ompt_data_t *thread_data)
 	nrm_scope_t *scope = (nrm_scope_t *)thread_data->ptr;
 	nrm_scope_threadprivate(scope);
 
-	nrm_time_gettime(&time);
-	nrm_client_send_event(global_client, time, global_sensor, scope, 1);
-	nrm_scope_destroy(scope);
+	nrm_time_gettime(&nrmtime);
+	nrm_client_send_event(global_client, nrmtime, global_sensor, scope, 1);
+	nrm_scope_destroy(&scope);
 	thread_data->ptr = NULL;
 }
 
@@ -37,8 +37,8 @@ void nrm_ompt_callback_parallel_begin_cb(
         int flags,
         const void *codeptr_ra)
 {
-	nrm_time_gettime(&time);
-	nrm_client_send_event(global_client, time, global_sensor, global_scope, 1);
+	nrm_time_gettime(&nrmtime);
+	nrm_client_send_event(global_client, nrmtime, global_sensor, global_scope, 1);
 }
 
 void nrm_ompt_callback_parallel_end_cb(ompt_data_t *parallel_data,
@@ -46,8 +46,8 @@ void nrm_ompt_callback_parallel_end_cb(ompt_data_t *parallel_data,
                                        int flags,
                                        const void *codeptr_ra)
 {
-	nrm_time_gettime(&time);
-	nrm_client_send_event(global_client, time, global_sensor, global_scope, 1);
+	nrm_time_gettime(&nrmtime);
+	nrm_client_send_event(global_client, nrmtime, global_sensor, global_scope, 1);
 }
 
 void nrm_ompt_callback_work_cb(ompt_work_t wstype,
