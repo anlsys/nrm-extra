@@ -3,17 +3,17 @@
 
 #include "nrm_omp.h"
 
-char *upstream_uri = "tcp://127.0.0.1";
-int pub_port = 2345;
-int rpc_port = 3456;
+static char *upstream_uri = "tcp://127.0.0.1";
+static int pub_port = 2345;
+static int rpc_port = 3456;
 
-nrm_client_t *global_client;
+static nrm_client_t *global_client;
 nrm_client_create(&global_client, upstream_uri, pub_port, rpc_port);
 
-nrm_scope_t *global_scope = nrm_scope_create();
+static nrm_scope_t *global_scope = nrm_scope_create();
 
 char *name = "nrm-omp";
-nrm_sensor_t *global_sensor = nrm_sensor_create(name);
+static nrm_sensor_t *global_sensor = nrm_sensor_create(name);
 
 void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type,
                                        ompt_data_t *thread_data)
