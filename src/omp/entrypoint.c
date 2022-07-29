@@ -56,7 +56,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 
 void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
-	nrm_scope_destroy(&global_scope);
+	nrm_scope_destroy(global_scope);
 	nrm_client_destroy(&global_client);
 	nrm_finalize();
 	return;

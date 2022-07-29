@@ -3,9 +3,9 @@
 
 #include "nrm_omp.h"
 
-upstream_uri = "tcp://127.0.0.1";
-pub_port = 2345;
-rpc_port = 3456;
+char *upstream_uri = "tcp://127.0.0.1";
+int pub_port = 2345;
+int rpc_port = 3456;
 
 nrm_client_create(&global_client, upstream_uri, pub_port, rpc_port);
 
