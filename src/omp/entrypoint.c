@@ -16,6 +16,13 @@
 static ompt_start_tool_result_t nrm_ompt_start;
 ompt_set_callback_t nrm_ompt_set_callback;
 
+char *upstream_uri = "tcp://127.0.0.1";
+int pub_port = 2345;
+int rpc_port = 3456;
+
+nrm_client_t *global_client;
+nrm_scope_t *global_scope;
+nrm_sensor_t *global_sensor;
 
 int nrm_ompt_initialize(ompt_function_lookup_t lookup,
                         int initial_device_num,
