@@ -30,9 +30,6 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 {
 	ompt_set_result_t ret;
 
-	/* right now nrm ctxt need to know the rank and cpuid of the application
-	 * which is probably a mistake...we initialize it to 0 as a ugly fix.
-	 */
 	nrm_init(NULL, NULL);
 
 	// initialize global client

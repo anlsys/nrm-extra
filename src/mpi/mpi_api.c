@@ -36,7 +36,6 @@
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
-nrm_time_t nrmtime;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -51,6 +50,8 @@ NRM_MPI_DECL(MPI_Allreduce,
              MPI_Op op,
              MPI_Comm comm)
 {
+	nrm_time_t nrmtime;
+
 	NRM_MPI_RESOLVE(MPI_Allreduce);
 	nrm_time_gettime(&nrmtime);
 	nrm_client_send_event(client, nrmtime, sensor, scope, 1);
@@ -63,6 +64,8 @@ NRM_MPI_DECL(MPI_Allreduce,
 
 NRM_MPI_DECL(MPI_Barrier, int, MPI_Comm comm)
 {
+	nrm_time_t nrmtime;
+
 	NRM_MPI_RESOLVE(MPI_Barrier);
 	nrm_time_gettime(&nrmtime);
 	nrm_client_send_event(client, nrmtime, sensor, scope, 1);

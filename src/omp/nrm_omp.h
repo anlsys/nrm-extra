@@ -29,8 +29,6 @@ extern int rpc_port;
 
 extern ompt_set_callback_t nrm_ompt_set_callback;
 
-extern nrm_time_t nrmtime;
-
 void nrm_ompt_register_cbs(void);
 
 #ifdef __cplusplus
