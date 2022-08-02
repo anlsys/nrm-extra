@@ -110,9 +110,11 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 
 	scope = nrm_scope_create();
 	nrm_scope_threadshared(scope);
+	nrm_client_add_scope(client, scope);
 
 	char *name = "nrm-mpi-init";
 	sensor = nrm_sensor_create(name);
+	nrm_client_add_sensor(client, sensor);
 
 	return ret;
 }
