@@ -88,9 +88,9 @@ NRM_MPI_DECL(MPI_Comm_rank, int, MPI_Comm comm, int *rank)
 NRM_MPI_DECL(MPI_Finalize, int, void)
 {
 	NRM_MPI_RESOLVE(MPI_Finalize);
-	nrm_finalize();
 	nrm_scope_destroy(scope);
 	nrm_client_destroy(&client);
+	nrm_finalize();
 	return NRM_MPI_REALNAME(MPI_Finalize);
 }
 
@@ -111,7 +111,7 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 	scope = nrm_scope_create();
 	nrm_scope_threadshared(scope);
 
-	char *name = "perf-wrap";
+	char *name = "nrm-mpi-init";
 	sensor = nrm_sensor_create(name);
 
 	return ret;

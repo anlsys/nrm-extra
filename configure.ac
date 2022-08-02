@@ -28,6 +28,7 @@ PKG_CHECK_MODULES([HWLOC], [hwloc])
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_OPENMP
+AC_CHECK_HEADER([omp-tools.h])
 
 AC_LANG_PUSH([Fortran])
 
