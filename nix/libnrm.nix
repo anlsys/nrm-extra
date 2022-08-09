@@ -5,6 +5,7 @@ stdenv.mkDerivation {
     ref = "master";
   };
   name = "libnrm";
+  prePatch = "echo 0.8.0 > .tarball-version";
   nativeBuildInputs = [ autoreconfHook pkgconfig git ];
   buildInputs = [ zeromq czmq jansson check protobufc ];
 }
