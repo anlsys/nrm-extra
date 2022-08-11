@@ -12,14 +12,21 @@
 #define NRM_OMP_H 1
 
 #include <omp-tools.h>
+
 #include <nrm.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern struct nrm_context *ctxt;
+extern nrm_client_t *global_client;
 extern nrm_scope_t *global_scope;
+extern nrm_sensor_t *global_sensor;
+
+extern char *upstream_uri;
+extern int pub_port;
+extern int rpc_port;
+
 extern ompt_set_callback_t nrm_ompt_set_callback;
 
 void nrm_ompt_register_cbs(void);
