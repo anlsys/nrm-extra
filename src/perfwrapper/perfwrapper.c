@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 	        EventCodeStr, EventCode);
 
 	/* launch? command, sample counters */
-	unsigned long long counter;
+	unsigned long long counter, total = 0;
 
 	int pid = fork();
 	if (pid < 0) {
@@ -226,8 +226,9 @@ int main(int argc, char **argv)
 		nrm_time_gettime(&time);
 		nrm_log_debug("NRM time obtained.\n");
 
-		nrm_client_send_event(client, time, sensor, scope, counter);
-		nrm_log_debug("NRM counter values sent.\n");
+		total += counter;
+		nrm_client_send_event(client, time, sensor, scope, total);
+		nrm_log_debug("NRM accumulated value sent.\n");
 
 		/* loop until child exits */
 		int status;
@@ -242,10 +243,11 @@ int main(int argc, char **argv)
 
 	/* final send here */
 	PAPI_stop(EventSet, &counter);
-	nrm_client_send_event(client, time, sensor, scope, counter);
+	nrm_client_send_event(client, time, sensor, scope, total);
 
 	/* finalize program */
 	nrm_scope_destroy(scope);
+	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
 	nrm_finalize();
 	exit(EXIT_SUCCESS);

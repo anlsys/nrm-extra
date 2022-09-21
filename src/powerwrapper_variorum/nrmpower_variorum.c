@@ -140,6 +140,7 @@ int main(int argc, char **argv)
 	       numa_id;
 	const char *key, *json_soutput;
 	json_t *value;
+	long *value_totals;
 
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
@@ -189,9 +190,11 @@ int main(int argc, char **argv)
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 
+	value_totals = calloc(n_scopes, sizeof(float));
+
 	nrm_log_debug("Beginning loop. ctrl+c to exit.\n");
 	do {
-
+		int count = 0;
 		nrm_time_gettime(&before_time);
 
 		/* sleep for a frequency */
@@ -217,14 +220,22 @@ int main(int argc, char **argv)
 			    (json_real_value(value) != -1.0)) {
 				numa_id = key[strlen(key) - 1] - '0';
 
+				nrm_log_debug("COUNT %d\n", count);
+
+				value_totals[count] += json_real_value(value);
+
 				if (strstr(key, "power_cpu_watts")) {
 					scope = nrm_cpu_scopes[numa_id];
 				} else if (strstr(key, "power_mem_watts")) {
 					scope = nrm_numa_scopes[numa_id];
 				}
+
+				nrm_log_debug("%s: TOTAL Power: %fW\n", key, (double)value_totals[count]);
+
 				nrm_client_send_event(client, after_time,
 				                      sensor, scope,
-				                      json_real_value(value));
+				                      (double)value_totals[count]);
+				count ++;
 			}
 		}
 
@@ -247,8 +258,11 @@ int main(int argc, char **argv)
 	}
 
 	nrm_log_debug("NRM scopes deleted.\n");
+	
+	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
 	nrm_finalize();
+	free(value_totals);
 
 	exit(EXIT_SUCCESS);
 }

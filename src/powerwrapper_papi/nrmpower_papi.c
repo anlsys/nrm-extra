@@ -277,12 +277,13 @@ int main(int argc, char **argv)
 	nrm_log_debug("%d NRM scopes initialized (%d NUMA and %d CPU)\n",
 	              n_scopes, n_numa_scopes, n_cpu_scopes);
 
-	long long *event_values;
+	long long *event_values, *event_totals;
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 	double watts_value;
 
 	event_values = calloc(num_events, sizeof(long long));
+	event_totals = calloc(num_events, sizeof(long long));
 
 	stop = 0;
 	double sleeptime = 1 / freq;
@@ -320,18 +321,20 @@ int main(int argc, char **argv)
 				                                // NUMANODE's
 				                                // logical ID
 
+				event_totals[i] += watts_value;
+
 				if (is_NUMA_event(event)) {
 					scope = nrm_numa_scopes[numa_id];
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
+					nrm_log_debug(
+				        "%-45s%4.2f J (Total Power %.2fW)\n",
+				        EventNames[i], (double)event_values[i],
+				        (double)event_totals[i]);
 				}
 				nrm_client_send_event(client, after_time,
 				                      sensor, scope,
-				                      watts_value);
-				nrm_log_debug(
-				        "%-45s%4.2f J (Average Power %.2fW)\n",
-				        EventNames[i], (double)event_values[i],
-				        watts_value);
+				                      (double)event_totals[i]);
 			}
 		}
 	} while (!stop);
@@ -351,13 +354,15 @@ int main(int argc, char **argv)
 			numa_id = parse_numa_id(event); // should match
 			                                // NUMANODE's logical ID
 
+			event_totals[i] += watts_value;
+
 			if (is_NUMA_event(event)) {
 				scope = nrm_numa_scopes[numa_id];
 			} else {
 				scope = nrm_cpu_scopes[numa_id];
 			}
 			nrm_client_send_event(client, after_time, sensor, scope,
-			                      watts_value);
+			                      event_totals[i]);
 		}
 	}
 
@@ -370,9 +375,13 @@ int main(int argc, char **argv)
 	}
 
 	nrm_log_debug("NRM scopes deleted.\n");
-
+	
+	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
+	
 	nrm_finalize();
+	free(event_values);
+	free(event_totals);
 
 	exit(EXIT_SUCCESS);
 }
