@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 	       numa_id;
 	const char *key, *json_soutput;
 	json_t *value, *json_measurements = json_object();
-	long *value_totals;
+	double *value_totals;
 
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
