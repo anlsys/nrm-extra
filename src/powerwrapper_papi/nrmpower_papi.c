@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	assert(client != NULL);
 
 	// create sensor
-	char *name = "papi-power";
+	const char *name = "papi-power";
 	sensor = nrm_sensor_create(name);
 
 	// client add sensor

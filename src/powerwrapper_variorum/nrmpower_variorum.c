@@ -117,7 +117,7 @@ int main(int argc, char **argv)
 	assert(client != NULL);
 
 	// create sensor
-	char *name = "variorum-power";
+	const char *name = "variorum-power";
 	sensor = nrm_sensor_create(name);
 
 	// client add sensor

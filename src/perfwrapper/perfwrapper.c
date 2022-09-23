@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 	nrm_log_debug("NRM scope initialized.\n");
 
 	// create sensor
-	char *name = "perf-wrap";
+	const char *name = "perf-wrap";
 	sensor = nrm_sensor_create(name);
 
 	// client add scope, sensor
