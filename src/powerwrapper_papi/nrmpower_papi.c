@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 	}
 
 	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrmpower-papi") == 0);
+	assert(nrm_log_init(stderr, "nrm.log.power-papi") == 0);
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	assert(client != NULL);
 
 	// create sensor
-	const char *name = "papi-power";
+	const char *name = "nrm.sensor.power-papi";
 	sensor = nrm_sensor_create(name);
 
 	// client add sensor

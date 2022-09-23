@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 	}
 
 	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "perfwrapper") == 0);
+	assert(nrm_log_init(stderr, "nrm.log.perfwrapper") == 0);
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 	nrm_log_debug("NRM scope initialized.\n");
 
 	// create sensor
-	const char *name = "perf-wrap";
+	const char *name = "nrm.sensor.perfwrapper";
 	sensor = nrm_sensor_create(name);
 
 	// client add scope, sensor
