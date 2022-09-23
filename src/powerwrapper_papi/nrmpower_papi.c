@@ -283,7 +283,8 @@ int main(int argc, char **argv)
 	double watts_value;
 
 	event_values = calloc(num_events, sizeof(long long));
-	event_totals = calloc(num_events, sizeof(long long));
+	event_totals = calloc(num_events, sizeof(double)); // converting then
+	                                                   // storing
 
 	stop = 0;
 	double sleeptime = 1 / freq;
@@ -328,13 +329,13 @@ int main(int argc, char **argv)
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
 					nrm_log_debug(
-				        "%-45s%4.2f J (Total Power %.2fW)\n",
-				        EventNames[i], (double)event_values[i],
-				        (double)event_totals[i]);
+					        "%-45s%4.2f J (Total Power %.2fW)\n",
+					        EventNames[i], event_values[i],
+					        event_totals[i]);
 				}
 				nrm_client_send_event(client, after_time,
 				                      sensor, scope,
-				                      (double)event_totals[i]);
+				                      event_totals[i]);
 			}
 		}
 	} while (!stop);
@@ -375,10 +376,10 @@ int main(int argc, char **argv)
 	}
 
 	nrm_log_debug("NRM scopes deleted.\n");
-	
+
 	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
-	
+
 	nrm_finalize();
 	free(event_values);
 	free(event_totals);
