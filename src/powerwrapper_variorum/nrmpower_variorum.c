@@ -126,10 +126,11 @@ int main(int argc, char **argv)
 	// 1st measure, only to determine viable measurements
 	// without delta, watts values should all be zero
 	// but since we're not reporting yet, that's ok
-	assert(variorum_get_node_power_json(&str_measurements) == 0); // actually
-	                                                              // sets
-	                                                              // string
-	                                                              // now
+	assert(variorum_get_node_power_json(&str_measurements) ==
+	       0); // actually
+	           // sets
+	           // string
+	           // now
 	nrm_log_debug(
 	        "Variorum first measurement performed. Detecting candidate fields and system topology.\n");
 
