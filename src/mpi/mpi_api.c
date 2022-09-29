@@ -111,12 +111,13 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 	nrm_init(NULL, NULL);
 	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
 
-	scope = nrm_scope_create();
+	char *scope_name = "nrm.scope.MPI_init";
+	scope = nrm_scope_create(scope_name);
 	nrm_scope_threadshared(scope);
 	nrm_client_add_scope(client, scope);
 
-	char *name = "nrm-mpi-init";
-	sensor = nrm_sensor_create(name);
+	char *sensor_name = "nrm.sensor.MPI_init";
+	sensor = nrm_sensor_create(sensor_name);
 	nrm_client_add_sensor(client, sensor);
 
 	return ret;

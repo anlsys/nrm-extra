@@ -124,12 +124,13 @@ int main(int argc, char **argv)
 	}
 
 	// create scope
-	scope = nrm_scope_create();
+	const char *scope_name = "nrm.scope.perfwrapper";
+	scope = nrm_scope_create(scope_name);
 	nrm_log_debug("NRM scope initialized.\n");
 
 	// create sensor
-	const char *name = "nrm.sensor.perfwrapper";
-	sensor = nrm_sensor_create(name);
+	const char *sensor_name = "nrm.sensor.perfwrapper";
+	sensor = nrm_sensor_create(sensor_name);
 
 	// client add scope, sensor
 	assert(nrm_client_add_scope(client, scope) == 0);

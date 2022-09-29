@@ -36,11 +36,12 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	nrm_client_create(&global_client, upstream_uri, pub_port, rpc_port);
 
 	// create global scope;
-	global_scope = nrm_scope_create();
+	char *scope_name = "nrm.scope.ompt_init";
+	global_scope = nrm_scope_create(scope_name);
 
 	// global sensor
-	char *name = "nrm-ompt";
-	global_sensor = nrm_sensor_create(name);
+	char *sensor_name = "nrm.sensor.ompt_init";
+	global_sensor = nrm_sensor_create(sensor_name);
 
 	// add global scope and sensor to client, as usual
 	nrm_client_add_scope(global_client, global_scope);

@@ -231,7 +231,10 @@ int main(int argc, char **argv)
 
 		if (is_energy_event(event, DataTypes[i])) {
 			n_energy_events++;
-			scope = nrm_scope_create();
+			char scope_name[24];
+			char *scope_base_name = "nrm.scope.power_papi-";
+			sprintf(scope_name, "%s%d", scope_base_name, n_energy_events);
+			scope = nrm_scope_create(scope_name);
 			numa_id = parse_numa_id(event); // should match
 			                                // NUMANODE's logical ID
 			nrm_log_debug("energy event detected.\n",
