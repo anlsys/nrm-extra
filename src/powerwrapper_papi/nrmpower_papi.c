@@ -233,7 +233,8 @@ int main(int argc, char **argv)
 			n_energy_events++;
 			char scope_name[24];
 			char *scope_base_name = "nrm.scope.power_papi-";
-			sprintf(scope_name, "%s%d", scope_base_name, n_energy_events);
+			sprintf(scope_name, "%s%d", scope_base_name,
+			        n_energy_events);
 			scope = nrm_scope_create(scope_name);
 			numa_id = parse_numa_id(event); // should match
 			                                // NUMANODE's logical ID
