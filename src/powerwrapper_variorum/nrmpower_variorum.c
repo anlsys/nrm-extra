@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 {
 	int char_opt, err;
 	double freq = 1;
-	json_t *json_measurements = json_object();
+	char *str_measurements;
 
 	// register callback handler for interrupt
 	signal(SIGINT, interrupt);
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 	}
 
 	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrmpower-variorum") == 0);
+	assert(nrm_log_init(stderr, "nrm.log.power-variorum") == 0);
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
 	assert(client != NULL);
 
 	// create sensor
-	char *name = "variorum-power";
+	const char *name = "nrm.sensor.power-variorum";
 	sensor = nrm_sensor_create(name);
 
 	// client add sensor
@@ -126,7 +126,11 @@ int main(int argc, char **argv)
 	// 1st measure, only to determine viable measurements
 	// without delta, watts values should all be zero
 	// but since we're not reporting yet, that's ok
-	assert(variorum_get_node_power_json(json_measurements) == 0);
+	assert(variorum_get_node_power_json(&str_measurements) ==
+	       0); // actually
+	           // sets
+	           // string
+	           // now
 	nrm_log_debug(
 	        "Variorum first measurement performed. Detecting candidate fields and system topology.\n");
 
@@ -139,10 +143,13 @@ int main(int argc, char **argv)
 	int i, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0, cpu_idx, cpu,
 	       numa_id;
 	const char *key, *json_soutput;
-	json_t *value;
+	json_t *value, *json_measurements = json_object();
+	double *value_totals;
 
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
+
+	json_measurements = json_loads(str_measurements, JSON_DECODE_ANY, NULL);
 
 	json_object_foreach(json_measurements, key, value)
 	{
@@ -189,9 +196,11 @@ int main(int argc, char **argv)
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 
+	value_totals = calloc(n_scopes, sizeof(double));
+
 	nrm_log_debug("Beginning loop. ctrl+c to exit.\n");
 	do {
-
+		int count = 0;
 		nrm_time_gettime(&before_time);
 
 		/* sleep for a frequency */
@@ -207,7 +216,9 @@ int main(int argc, char **argv)
 		nrm_time_gettime(&after_time);
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
-		assert(variorum_get_node_power_json(json_measurements) == 0);
+		assert(variorum_get_node_power_json(&str_measurements) == 0);
+		json_measurements =
+		        json_loads(str_measurements, JSON_DECODE_ANY, NULL);
 
 		json_object_foreach(json_measurements, key, value)
 		{
@@ -217,14 +228,25 @@ int main(int argc, char **argv)
 			    (json_real_value(value) != -1.0)) {
 				numa_id = key[strlen(key) - 1] - '0';
 
+				nrm_log_debug("COUNT %d\n", count);
+
+				value_totals[count] +=
+				        json_real_value(value); // returns
+				                                // double
+
 				if (strstr(key, "power_cpu_watts")) {
 					scope = nrm_cpu_scopes[numa_id];
 				} else if (strstr(key, "power_mem_watts")) {
 					scope = nrm_numa_scopes[numa_id];
 				}
+
+				nrm_log_debug("%s: TOTAL Power: %fW\n", key,
+				              value_totals[count]);
+
 				nrm_client_send_event(client, after_time,
 				                      sensor, scope,
-				                      json_real_value(value));
+				                      value_totals[count]);
+				count++;
 			}
 		}
 
@@ -247,8 +269,13 @@ int main(int argc, char **argv)
 	}
 
 	nrm_log_debug("NRM scopes deleted.\n");
+
+	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
 	nrm_finalize();
+	free(value_totals);
+	free(str_measurements);
+	json_decref(json_measurements);
 
 	exit(EXIT_SUCCESS);
 }

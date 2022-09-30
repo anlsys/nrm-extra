@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 	}
 
 	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrmpower-papi") == 0);
+	assert(nrm_log_init(stderr, "nrm.log.power-papi") == 0);
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	assert(client != NULL);
 
 	// create sensor
-	char *name = "papi-power";
+	const char *name = "nrm.sensor.power-papi";
 	sensor = nrm_sensor_create(name);
 
 	// client add sensor
@@ -280,9 +280,11 @@ int main(int argc, char **argv)
 	long long *event_values;
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
-	double watts_value;
+	double watts_value, *event_totals;
 
 	event_values = calloc(num_events, sizeof(long long));
+	event_totals = calloc(num_events, sizeof(double)); // converting then
+	                                                   // storing
 
 	stop = 0;
 	double sleeptime = 1 / freq;
@@ -320,18 +322,20 @@ int main(int argc, char **argv)
 				                                // NUMANODE's
 				                                // logical ID
 
+				event_totals[i] += watts_value;
+
 				if (is_NUMA_event(event)) {
 					scope = nrm_numa_scopes[numa_id];
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
+					nrm_log_debug(
+					        "%-45s%4.2f J (Total Power %.2fW)\n",
+					        EventNames[i], event_values[i],
+					        event_totals[i]);
 				}
 				nrm_client_send_event(client, after_time,
 				                      sensor, scope,
-				                      watts_value);
-				nrm_log_debug(
-				        "%-45s%4.2f J (Average Power %.2fW)\n",
-				        EventNames[i], (double)event_values[i],
-				        watts_value);
+				                      event_totals[i]);
 			}
 		}
 	} while (!stop);
@@ -351,13 +355,15 @@ int main(int argc, char **argv)
 			numa_id = parse_numa_id(event); // should match
 			                                // NUMANODE's logical ID
 
+			event_totals[i] += watts_value;
+
 			if (is_NUMA_event(event)) {
 				scope = nrm_numa_scopes[numa_id];
 			} else {
 				scope = nrm_cpu_scopes[numa_id];
 			}
 			nrm_client_send_event(client, after_time, sensor, scope,
-			                      watts_value);
+			                      event_totals[i]);
 		}
 	}
 
@@ -371,8 +377,12 @@ int main(int argc, char **argv)
 
 	nrm_log_debug("NRM scopes deleted.\n");
 
+	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
+
 	nrm_finalize();
+	free(event_values);
+	free(event_totals);
 
 	exit(EXIT_SUCCESS);
 }
