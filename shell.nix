@@ -12,6 +12,7 @@ mkShell.override { stdenv = pkgs.stdenv; } {
     python3
     llvmPackages.clang-unwrapped.python
   ];
-
+  VARIORUM_CFLAGS = "-I${variorum}/include";
+  VARIORUM_LIBS = "-L${variorum}/lib -lvariorum";
   CFLAGS = "-Wall -Wextra";
 }

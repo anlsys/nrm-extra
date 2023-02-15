@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 	{
 		// variorum inits un-measureable as -1.0, measureable as 0.0
 		if (strstr(key, "socket") && (json_real_value(value) != -1.0)) {
-			scope = nrm_scope_create();
+			scope = nrm_scope_create("nrm.var.dummy");
 			numa_id = key[strlen(key) - 1] - '0';
 
 			if (strstr(key, "power_cpu_watts")) { // need NUMANODE

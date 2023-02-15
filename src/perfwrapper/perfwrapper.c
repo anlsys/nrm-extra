@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 	}
 
 	// create scope
-	scope = nrm_scope_create();
+	scope = nrm_scope_create("nrm.perf");
 	nrm_log_debug("NRM scope initialized.\n");
 
 	// create sensor
