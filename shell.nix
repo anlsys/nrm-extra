@@ -2,7 +2,7 @@
 { pkgs ? import ./. { } }:
 with pkgs;
 mkShell.override { stdenv = pkgs.stdenv; } {
-  inputsFrom = [ nrm-extra ] ++ libnrm.buildInputs;
+  inputsFrom = [ nrm-extra ];
   nativeBuildInputs = [ autoreconfHook pkgconfig ];
   buildInputs = [
     # deps for debug
@@ -11,6 +11,7 @@ mkShell.override { stdenv = pkgs.stdenv; } {
     clang-tools
     python3
     llvmPackages.clang-unwrapped.python
+    valgrind
   ];
   VARIORUM_CFLAGS = "-I${variorum}/include";
   VARIORUM_LIBS = "-L${variorum}/lib -lvariorum";
