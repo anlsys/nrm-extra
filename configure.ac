@@ -53,7 +53,6 @@ AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 src/mpi/Makefile
 		 src/omp/Makefile
-		 src/perfwrapper/Makefile
          src/powerwrapper_papi/Makefile
          src/powerwrapper_variorum/Makefile
 		 ctests/Makefile
