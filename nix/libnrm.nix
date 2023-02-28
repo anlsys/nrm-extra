@@ -2,8 +2,7 @@
 stdenv.mkDerivation {
   src = fetchGit {
     url = "https://github.com/anlsys/libnrm.git";
-    ref = "feature/scope-creation-api";
-    rev = "cf84cb9e030ce9cd7ca1a180efe0ac8f1843d968";
+    ref = "master";
   };
   name = "libnrm";
   prePatch = "echo 0.8.0 > .tarball-version";
