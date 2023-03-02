@@ -223,14 +223,14 @@ int main(int argc, char **argv)
 	static int custom_scopes[MAX_MEASUREMENTS];
 
 	int n_energy_events = 0, n_scopes = 0, n_numa_scopes = 0,
-	    n_cpu_scopes = 0, n_custom_scopes cpu_idx, cpu, numa_id;
+	    n_cpu_scopes = 0, n_custom_scopes, cpu_idx, cpu, numa_id;
 	char *event;
 	char *scope_name, scope_type[5];
-	const char scope_format[] = "nrm.papi.%s.%u" //*pattern =
-	                                             //"nrm.papi.%s.%d"; // e.g.
-	                                             //nrm.papi.numa.1 or
-	                                             //nrm.papi.cpu.2
-	        size_t bufsize = 16;
+	const char scope_format[] = "nrm.papi.%s.%u"; //*pattern =
+	                                              //"nrm.papi.%s.%d"; //
+	                                              //e.g. nrm.papi.numa.1 or
+	                                              // nrm.papi.cpu.2
+	size_t bufsize = 16;
 	// nrm.papi.cpu.* int corresponds to n-created, not cpu idxs
 
 	assert(hwloc_topology_init(&topology) == 0);
