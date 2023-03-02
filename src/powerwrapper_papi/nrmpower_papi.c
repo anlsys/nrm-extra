@@ -33,13 +33,15 @@
 #include <unistd.h>
 
 #include <nrm.h>
+#include "extra.h"
 
-static int log_level = 0;
+static int log_level = NRM_LOG_DEBUG;
 volatile sig_atomic_t stop;
 
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
+static int custom_scope = 0;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -133,7 +135,7 @@ int main(int argc, char **argv)
 	}
 
 	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrm.log.power-papi") == 0);
+	assert(nrm_log_init(stderr, "nrm.extra.papi") == 0);
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
