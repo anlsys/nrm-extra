@@ -1,9 +1,20 @@
+/*******************************************************************************
+ * Copyright 2021 UChicago Argonne, LLC.
+ * (c.f. AUTHORS, LICENSE)
+ *
+ * This file is part of the nrm-extra project.
+ * For more info, see https://github.com/anlsys/nrm-extra
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include <nrm.h>
 
 #include "extra.h"
@@ -24,9 +35,10 @@ int nrm_extra_create_name(const char *pattern, char **name)
 	return 0;
 }
 
-
-int nrm_extra_find_allowed_scope(nrm_client_t *client, const char *toolname,
-				 nrm_scope_t **scope, int *added)
+int nrm_extra_find_allowed_scope(nrm_client_t *client,
+                                 const char *toolname,
+                                 nrm_scope_t **scope,
+                                 int *added)
 {
 	char *buf;
 	int err;
@@ -57,7 +69,8 @@ int nrm_extra_find_allowed_scope(nrm_client_t *client, const char *toolname,
 		nrm_scope_destroy(s);
 	}
 	if (!newscope) {
-		nrm_log_debug("allowed scope not found in nrmd, adding a new one\n");
+		nrm_log_debug(
+		        "allowed scope not found in nrmd, adding a new one\n");
 		assert(nrm_client_add_scope(client, allowed) == 0);
 	}
 	*added = !newscope;

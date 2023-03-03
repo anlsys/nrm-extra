@@ -4,11 +4,11 @@ jobs:
   clang-format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: retrieve merge target info
         run: git fetch origin $GITHUB_BASE_REF
       - run: sudo apt-get update
-      - run: sudo apt-get install -y clang-format-10
+      - run: sudo apt-get install -y clang-format-12
       - name: run git-clang-format
         run: |
           target=$(git rev-parse origin/$GITHUB_BASE_REF)
@@ -22,5 +22,5 @@ jobs:
     runs-on: ubuntu-latest
     container: apache/skywalking-eyes
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: /bin/license-eye -c .licenserc.yml -v debug header check
