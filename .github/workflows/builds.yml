@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  CFLAGS: "-I/usr/lib/llvm-14/lib/clang/14.0.0/include"
+  OMPT_FLAGS: "-I/usr/lib/llvm-14/lib/clang/14.0.0/include"
   VERBOSE: 1
   INSTALL_PATH: build
 jobs:
@@ -48,7 +48,7 @@ jobs:
           ./autogen.sh
           mkdir build
           export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
-          ./configure --prefix=`pwd`/build
+          ./configure --prefix=`pwd`/build CFLAGS=$OMPT_FLAGS
       - name: make
         run: |
           cd nrm-extra
@@ -107,7 +107,7 @@ jobs:
           mkdir out
           cd out
           mkdir build
-          ../configure --prefix=`pwd`/build
+          ../configure --prefix=`pwd`/build CFLAGS=$OMPT_FLAGS
       - name: make
         run: |
           cd nrm-extra/out
@@ -172,7 +172,7 @@ jobs:
           cd nrm-extra
           ./autogen.sh
           mkdir build
-          ./configure --prefix=`pwd`/build
+          ./configure --prefix=`pwd`/build CFLAGS=$OMPT_FLAGS
       - name: make distcheck
         run: |
           cd nrm-extra
