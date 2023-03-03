@@ -235,6 +235,8 @@ int main(int argc, char **argv)
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
 
+	int added;
+
 	// INSTEAD: create a scope for each measure-able event, with
 	// corresponding indexes
 	for (i = 0; i < num_events; i++) {
@@ -249,77 +251,38 @@ int main(int argc, char **argv)
 			nrm_log_debug("energy event detected.\n",
 			              n_energy_events);
 
-			scope_name = calloc(1, bufsize);
+			nrm_log_debug("Creating new scope: %s\n", scope_name);
+
+			scope = nrm_scope_create(scope_name);
+
 			if (is_NUMA_event(event)) {
-				scope_type = "NUMA";
-				n_numa_scopes++;
-				snprintf(scope_name, bufsize, scope_format,
-				         scope_type, n_numa_scopes);
-				nrm_log_debug("NUMA energy event detected.\n",
-				              n_energy_events);
-			} else { // need NUMANODE object to parse CPU indexes
-				scope_type = "CPU";
-				n_cpu_scopes++;
-				snprintf(scope_name, bufsize, scope_format,
-				         scope_type, n_cpu_scopes);
-				nrm_log_debug("CPU energy event detected.\n",
-				              n_energy_events);
-			}
-			nrm_vector_t *search_results;
-			err = nrm_client_find(client, NRM_MSG_TARGET_TYPE_SCOPE,
-			                      scope_name, &search_results);
-
-			if (err) {
-				nrm_log_error("error during client request\n");
-				exit(EXIT_FAILURE);
-			}
-
-			nrm_vector_foreach(search_results, iterator)
-			{
-				nrm_scope_t *result =
-				        nrm_vector_iterator_get(iterator);
-			}
-			if (result != NULL) {
-				nrm_log_debug(
-				        "Scope %s retrieved from daemon.\n",
-				        scope_name);
-				scope = result;
-				if (is_NUMA_event(event)) { // we only tried
-					                    // retrieving a numa
-					                    // scope on
-					                    // detecting a numa
-					                    // event
-					nrm_numa_scopes[numa_id] = scope;
-				} else {
-					nrm_cpu_scopes[numa_id] = scope;
-				}
-			} else {
-				nrm_log_debug("Creating new scope: %s\n",
-				              scope_name);
-
+				err = nrm_extra_create_name_ssu("nrm.papi",
+				                                "numa", numa_id,
+				                                &scope_name);
 				scope = nrm_scope_create(scope_name);
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
+				              numa_id);
+				nrm_extra_find_scope(client, &scope, &added);
+				free(scope_name);
+				nrm_numa_scopes[numa_id] = scope;
 
-				if (is_NUMA_event(event)) {
-					nrm_scope_add(scope,
-					              NRM_SCOPE_TYPE_NUMA,
-					              numa_id);
-					nrm_numa_scopes[numa_id] = scope;
-
-				} else { // need NUMANODE object to parse CPU
-					 // indexes
-					numanode = hwloc_get_obj_by_type(
-					        topology, HWLOC_OBJ_NUMANODE,
-					        numa_id);
-					cpus = numanode->cpuset;
-					hwloc_bitmap_foreach_begin(cpu, cpus)
-					        cpu_idx = get_cpu_idx(topology,
-					                              cpu);
-					nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-					              cpu_idx);
-					hwloc_bitmap_foreach_end();
-					nrm_cpu_scopes[numa_id] = scope;
-				}
-				nrm_client_add_scope(client, scope);
+			} else { // need NUMANODE object to parse CPU
+				 // indexes
+				err = nrm_extra_create_name_ssu("nrm.papi",
+				                                "cpu", numa_id,
+				                                &scope_name);
+				scope = nrm_scope_create(scope_name);
+				numanode = hwloc_get_obj_by_type(
+				        topology, HWLOC_OBJ_NUMANODE, numa_id);
+				cpus = numanode->cpuset;
+				hwloc_bitmap_foreach_begin(cpu, cpus)
+				        cpu_idx = get_cpu_idx(topology, cpu);
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+				              cpu_idx);
+				hwloc_bitmap_foreach_end();
+				nrm_extra_find_scope(client, &scope, &added);
+				free(scope_name);
+				nrm_cpu_scopes[numa_id] = scope;
 			}
 			n_scopes++;
 		}

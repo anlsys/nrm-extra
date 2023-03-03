@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include <nrm.h>
 
 #include "extra.h"
@@ -24,9 +25,27 @@ int nrm_extra_create_name(const char *pattern, char **name)
 	return 0;
 }
 
+int nrm_extra_create_name_ssu(const char *pattern,
+                              const char *extra,
+                              unsigned int idx,
+                              char **name)
+{
+	char *buf;
+	size_t bufsize;
+	bufsize = snprintf(NULL, 0, "%s.%s.%u", pattern, extra, idx);
+	bufsize++;
+	buf = calloc(1, bufsize);
+	if (!buf)
+		return -NRM_ENOMEM;
+	snprintf(buf, bufsize, "%s.%s.%u", pattern, extra, idx);
+	*name = buf;
+	return 0;
+}
 
-int nrm_extra_find_allowed_scope(nrm_client_t *client, const char *toolname,
-				 nrm_scope_t **scope, int *added)
+int nrm_extra_find_allowed_scope(nrm_client_t *client,
+                                 const char *toolname,
+                                 nrm_scope_t **scope,
+                                 int *added)
 {
 	char *buf;
 	int err;
@@ -57,10 +76,40 @@ int nrm_extra_find_allowed_scope(nrm_client_t *client, const char *toolname,
 		nrm_scope_destroy(s);
 	}
 	if (!newscope) {
-		nrm_log_debug("allowed scope not found in nrmd, adding a new one\n");
+		nrm_log_debug(
+		        "allowed scope not found in nrmd, adding a new one\n");
 		assert(nrm_client_add_scope(client, allowed) == 0);
 	}
+	nrm_vector_destroy(&nrmd_scopes);
 	*added = !newscope;
 	*scope = allowed;
+	return 0;
+}
+
+int nrm_extra_find_scope(nrm_client_t *client, nrm_scope_t **scope, int *added)
+{
+	nrm_vector_t *nrmd_scopes;
+	int newscope = 0;
+	size_t numscopes;
+	nrm_client_list_scopes(client, &nrmd_scopes);
+	nrm_vector_length(nrmd_scopes, &numscopes);
+	for (size_t i = 0; i < numscopes; i++) {
+		nrm_scope_t *s;
+		nrm_vector_pop_back(nrmd_scopes, &s);
+		if (!nrm_scope_cmp(s, *scope)) {
+			nrm_scope_destroy(*scope);
+			*scope = s;
+			newscope = 1;
+			continue;
+		}
+		nrm_scope_destroy(s);
+	}
+	if (!newscope) {
+		nrm_log_debug(
+		        "allowed scope not found in nrmd, adding a new one\n");
+		assert(nrm_client_add_scope(client, allowed) == 0);
+	}
+	nrm_vector_destroy(&nrmd_scopes);
+	*added = !newscope;
 	return 0;
 }
