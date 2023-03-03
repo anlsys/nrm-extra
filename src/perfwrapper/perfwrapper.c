@@ -52,7 +52,6 @@ char *usage =
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
-
 int main(int argc, char **argv)
 {
 	int c, err;
@@ -124,7 +123,8 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	nrm_extra_find_allowed_scope(client, "nrm.extra.perf", &scope, &custom_scope);
+	nrm_extra_find_allowed_scope(client, "nrm.extra.perf", &scope,
+	                             &custom_scope);
 	nrm_log_debug("NRM scope initialized.\n");
 
 	/* create our sensor and add it to the daemon */
