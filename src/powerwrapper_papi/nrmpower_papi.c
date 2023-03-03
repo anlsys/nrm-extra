@@ -231,7 +231,6 @@ int main(int argc, char **argv)
 	                                              // e.g. nrm.papi.numa.1 or
 	                                              // nrm.papi.cpu.2
 	size_t bufsize = 16;
-	// nrm.papi.cpu.* int corresponds to n-created, not cpu idxs
 
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
@@ -266,33 +265,63 @@ int main(int argc, char **argv)
 				nrm_log_debug("CPU energy event detected.\n",
 				              n_energy_events);
 			}
-			printf("%s", scope_name);
+			nrm_vector_t *search_results;
+			err = nrm_client_find(client, NRM_MSG_TARGET_TYPE_SCOPE,
+			                      scope_name, &search_results);
 
-			nrm_log_debug("about to add scope to client.\n",
-			              n_energy_events);
-			// nrm_client_add_scope(client, scope);
-
-			scope = nrm_scope_create(scope_name);
-			n_scopes++;
-
-			if (is_NUMA_event(event)) {
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
-				              numa_id);
-				nrm_numa_scopes[numa_id] = scope;
-
-			} else { // need NUMANODE object to parse CPU indexes
-				numanode = hwloc_get_obj_by_type(
-				        topology, HWLOC_OBJ_NUMANODE, numa_id);
-				cpus = numanode->cpuset;
-				hwloc_bitmap_foreach_begin(cpu, cpus)
-				        cpu_idx = get_cpu_idx(topology, cpu);
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-				              cpu_idx); //
-				hwloc_bitmap_foreach_end();
-				nrm_cpu_scopes[numa_id] = scope;
+			if (err) {
+				nrm_log_error("error during client request\n");
+				exit(EXIT_FAILURE);
 			}
-			nrm_log_debug("new scope added to client.\n",
-			              n_energy_events);
+
+			nrm_vector_foreach(search_results, iterator)
+			{
+				nrm_scope_t *result =
+				        nrm_vector_iterator_get(iterator);
+			}
+			if (result != NULL) {
+				nrm_log_debug(
+				        "Scope %s retrieved from daemon.\n",
+				        scope_name);
+				scope = result;
+				if (is_NUMA_event(event)) { // we only tried
+					                    // retrieving a numa
+					                    // scope on
+					                    // detecting a numa
+					                    // event
+					nrm_numa_scopes[numa_id] = scope;
+				} else {
+					nrm_cpu_scopes[numa_id] = scope;
+				}
+			} else {
+				nrm_log_debug("Creating new scope: %s\n",
+				              scope_name);
+
+				scope = nrm_scope_create(scope_name);
+
+				if (is_NUMA_event(event)) {
+					nrm_scope_add(scope,
+					              NRM_SCOPE_TYPE_NUMA,
+					              numa_id);
+					nrm_numa_scopes[numa_id] = scope;
+
+				} else { // need NUMANODE object to parse CPU
+					 // indexes
+					numanode = hwloc_get_obj_by_type(
+					        topology, HWLOC_OBJ_NUMANODE,
+					        numa_id);
+					cpus = numanode->cpuset;
+					hwloc_bitmap_foreach_begin(cpu, cpus)
+					        cpu_idx = get_cpu_idx(topology,
+					                              cpu);
+					nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+					              cpu_idx);
+					hwloc_bitmap_foreach_end();
+					nrm_cpu_scopes[numa_id] = scope;
+				}
+				nrm_client_add_scope(client, scope);
+			}
+			n_scopes++;
 		}
 	}
 
