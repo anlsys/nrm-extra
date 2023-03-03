@@ -2,8 +2,8 @@
  * Copyright 2021 UChicago Argonne, LLC.
  * (c.f. AUTHORS, LICENSE)
  *
- * This file is part of the libnrm project.
- * For more info, see https://github.com/anlsys/libnrm
+ * This file is part of the nrm-extra project.
+ * For more info, see https://github.com/anlsys/nrm-extra
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
