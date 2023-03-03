@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright 2021 UChicago Argonne, LLC.
+ * (c.f. AUTHORS, LICENSE)
+ *
+ * This file is part of the nrm-extra project.
+ * For more info, see https://github.com/anlsys/nrm-extra
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>

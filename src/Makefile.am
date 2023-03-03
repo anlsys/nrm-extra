@@ -8,6 +8,7 @@ AM_CFLAGS = $(COMMON_CFLAGS)
 AM_LDFLAGS = $(COMMON_LDFLAGS)
 
 noinst_LTLIBRARIES = libcommon.la
+noinst_HEADERS = common/extra.h
 libcommon_la_SOURCES = common/extra.c
 
 nrm_perfwrapper_SOURCES = perfwrapper/perfwrapper.c
