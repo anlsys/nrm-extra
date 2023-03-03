@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  CC=clang
+  CC: clang
   VERBOSE: 1
   INSTALL_PATH: build
 jobs:
