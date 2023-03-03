@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  CFLAGS: "-I/usr/lib/llvm-10/include/openmp"
+  CFLAGS: "-I/usr/lib/llvm-12/include/openmp"
   VERBOSE: 1
   INSTALL_PATH: build
 jobs:
