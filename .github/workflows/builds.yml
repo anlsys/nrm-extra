@@ -7,6 +7,7 @@ on:
 
 env:
   OMPT_FLAGS: "-I/usr/lib/llvm-14/lib/clang/14.0.0/include"
+  CC: clang-14
   VERBOSE: 1
   INSTALL_PATH: build
 jobs:
@@ -14,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev libhwloc-dev libczmq-dev check libprotobuf-c-dev protobuf-c-compiler
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev libhwloc-dev libczmq-dev check libprotobuf-c-dev protobuf-c-compiler clang-14
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -73,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev libhwloc-dev libczmq-dev check libprotobuf-c-dev protobuf-c-compiler
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev libhwloc-dev libczmq-dev check libprotobuf-c-dev protobuf-c-compiler clang-14
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
@@ -140,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get update
-      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev libhwloc-dev libczmq-dev check libprotobuf-c-dev protobuf-c-compiler
+      - run: sudo apt-get install -y gcc make autoconf automake libtool pkg-config libzmq3-dev libzmq5 gfortran mpich libomp-dev libomp5 libpapi-dev libjansson-dev libhwloc-dev libczmq-dev check libprotobuf-c-dev protobuf-c-compiler clang-14
       - uses: actions/checkout@v2
         with:
           repository: anlsys/libnrm
