@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  CFLAGS: "-I/usr/lib/llvm-14/lib/clang/14.0.0/include/omp-tools.h"
+  CFLAGS: "-I/usr/lib/llvm-14/lib/clang/14.0.0/include"
   VERBOSE: 1
   INSTALL_PATH: build
 jobs:
