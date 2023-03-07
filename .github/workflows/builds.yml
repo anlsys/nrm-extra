@@ -48,7 +48,6 @@ jobs:
           ./autogen.sh
           mkdir build
           export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
-          export CFLAGS="-I$PWD/extra/omp/ -I$PWD/src/common/"
           ./configure --prefix=`pwd`/build
       - name: make
         run: |
