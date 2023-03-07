@@ -117,7 +117,7 @@ int nrm_extra_find_scope(nrm_client_t *client, nrm_scope_t **scope, int *added)
 	if (!newscope) {
 		nrm_log_debug(
 		        "allowed scope not found in nrmd, adding a new one\n");
-		assert(nrm_client_add_scope(client, allowed) == 0);
+		assert(nrm_client_add_scope(client, *scope) == 0);
 	}
 	nrm_vector_destroy(&nrmd_scopes);
 	*added = !newscope;
