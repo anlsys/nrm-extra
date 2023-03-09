@@ -19,6 +19,7 @@ ompt_set_callback_t nrm_ompt_set_callback;
 char *upstream_uri = "tcp://127.0.0.1";
 int pub_port = 2345;
 int rpc_port = 3456;
+int added;
 
 nrm_client_t *global_client;
 nrm_scope_t *global_scope;
@@ -43,7 +44,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	global_sensor = nrm_sensor_create(name);
 
 	// add global scope and sensor to client, as usual
-	nrm_client_add_scope(global_client, global_scope);
+	nrm_extra_find_scope(global_client, &global_scope, &added);
 	nrm_client_add_sensor(global_client, global_sensor);
 
 	/* use the lookup function to retrieve a function pointer to
@@ -60,7 +61,8 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 
 void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
-	nrm_scope_destroy(global_scope);
+	if (added)
+		nrm_scope_destroy(global_scope);
 	nrm_client_destroy(&global_client);
 	nrm_finalize();
 	return;

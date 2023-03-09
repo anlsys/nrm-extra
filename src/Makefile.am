@@ -21,4 +21,9 @@ nrm_powerwrapper_papi_LDADD = libcommon.la
 nrm_powerwrapper_papi_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@
 nrm_powerwrapper_papi_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@
 
-bin_PROGRAMS = nrm-perfwrapper nrm-powerwrapper-papi
+nrm_powerwrapper_variorum_SOURCES = powerwrapper_variorum/nrmpower_variorum.c
+nrm_powerwrapper_variorum_LDADD = libcommon.la
+nrm_powerwrapper_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @JANSSON_CFLAGS@
+nrm_powerwrapper_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @JANSSON_LIBS@
+
+bin_PROGRAMS = nrm-perfwrapper nrm-powerwrapper-papi nrm-powerwrapper-variorum
