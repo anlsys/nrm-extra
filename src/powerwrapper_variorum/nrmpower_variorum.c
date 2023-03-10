@@ -34,6 +34,8 @@
 
 #include <nrm.h>
 
+#include "extra.h"
+
 static int log_level = 0;
 volatile sig_atomic_t stop;
 
