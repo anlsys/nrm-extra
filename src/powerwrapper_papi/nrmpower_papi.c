@@ -348,11 +348,10 @@ int main(int argc, char **argv)
 					scope = nrm_numa_scopes[numa_id];
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
-					nrm_log_debug(
-					        "%-45s%4.2f J (Total Power %.2fW)\n",
-					        EventNames[i], event_values[i],
-					        event_totals[i]);
 				}
+				nrm_log_debug("%-45s%4i uj (Total Power %f W)\n",
+						EventNames[i], event_values[i],
+						event_totals[i]);
 				err = nrm_client_send_event(client, after_time,
 				                            sensor, scope,
 				                            event_totals[i]);
