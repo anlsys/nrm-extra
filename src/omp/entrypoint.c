@@ -10,8 +10,10 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "nrm_omp.h"
+#include "extra.h"
 
 static ompt_start_tool_result_t nrm_ompt_start;
 ompt_set_callback_t nrm_ompt_set_callback;
@@ -19,6 +21,7 @@ ompt_set_callback_t nrm_ompt_set_callback;
 char *upstream_uri = "tcp://127.0.0.1";
 int pub_port = 2345;
 int rpc_port = 3456;
+int global_added;
 
 nrm_client_t *global_client;
 nrm_scope_t *global_scope;
@@ -37,13 +40,13 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 
 	// create global scope;
 	global_scope = nrm_scope_create("nrm.ompt.global");
+	nrm_extra_find_scope(global_client, &global_scope, &global_added);
 
 	// global sensor
 	char *name = "nrm-ompt";
 	global_sensor = nrm_sensor_create(name);
 
 	// add global scope and sensor to client, as usual
-	nrm_client_add_scope(global_client, global_scope);
 	nrm_client_add_sensor(global_client, global_sensor);
 
 	/* use the lookup function to retrieve a function pointer to
@@ -53,6 +56,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	assert(nrm_ompt_set_callback != NULL);
 
 	nrm_ompt_register_cbs();
+	free(name);
 
 	/* spec dictates that we return non-zero to keep the tool active */
 	return 1;
@@ -60,7 +64,9 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 
 void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
-	nrm_scope_destroy(global_scope);
+	if (global_added)
+		nrm_client_remove_scope(global_client, global_scope);
+	nrm_scope_create(&global_scope)
 	nrm_client_destroy(&global_client);
 	nrm_finalize();
 	return;
