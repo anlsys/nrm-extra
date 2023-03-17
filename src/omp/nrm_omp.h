@@ -29,6 +29,8 @@ extern int rpc_port;
 
 extern ompt_set_callback_t nrm_ompt_set_callback;
 
+typedef struct omp_scopeinfo_s omp_scopeinfo_t;
+
 void nrm_ompt_register_cbs(void);
 
 #ifdef __cplusplus
