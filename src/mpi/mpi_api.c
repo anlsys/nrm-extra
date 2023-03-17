@@ -36,6 +36,7 @@
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
+int added;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -91,6 +92,8 @@ NRM_MPI_DECL(MPI_Comm_rank, int, MPI_Comm comm, int *rank)
 NRM_MPI_DECL(MPI_Finalize, int, void)
 {
 	NRM_MPI_RESOLVE(MPI_Finalize);
+	if (added)
+		nrm_client_remove_scope(client, scope);
 	nrm_scope_destroy(scope);
 	nrm_client_destroy(&client);
 	nrm_finalize();
@@ -113,11 +116,12 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 
 	scope = nrm_scope_create("nrm.pmpi.global");
 	nrm_scope_threadshared(scope);
-	nrm_client_add_scope(client, scope);
+	nrm_extra_find_scope(client, &scope, &added);
 
 	char *name = "nrm-mpi-init";
 	sensor = nrm_sensor_create(name);
 	nrm_client_add_sensor(client, sensor);
+	free(name);
 
 	return ret;
 }
