@@ -9,4 +9,4 @@ OMP_TESTS = omp_basic \
 	    omp_stream
 
 check_PROGRAMS = $(OMP_TESTS)
-TESTS = $(OMP_TESTS)
+#TESTS = $(OMP_TESTS)

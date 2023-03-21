@@ -28,7 +28,10 @@ PKG_CHECK_MODULES([HWLOC], [hwloc])
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_OPENMP
+save_CFLAGS="$CFLAGS"
+CFLAGS="$OPENMP_CFLAGS"
 AC_CHECK_HEADER([omp-tools.h])
+CFLAGS="$save_CFLAGS"
 
 AC_LANG_PUSH([Fortran])
 
@@ -53,7 +56,6 @@ AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 src/mpi/Makefile
 		 src/omp/Makefile
-		 src/perfwrapper/Makefile
          src/powerwrapper_papi/Makefile
          src/powerwrapper_variorum/Makefile
 		 ctests/Makefile

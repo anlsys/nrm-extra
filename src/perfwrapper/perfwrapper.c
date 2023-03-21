@@ -31,18 +31,21 @@
 
 #include <nrm.h>
 
+#include "extra.h"
+
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
+static int custom_scope = 0;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
 static int rpc_port = 3456;
 
-static int log_level = 0;
+static int log_level = NRM_LOG_DEBUG;
 
 char *usage =
-        "usage: perfwrapper [options] -e [papi event] [command]\n"
+        "Usage: nrm-perfwrapper [options] [command]\n"
         "     options:\n"
         "            -e, --event             PAPI preset event name. Default: PAPI_TOT_INS\n"
         "            -f, --frequency         Frequency in hz to poll. Default: 10.0\n"
@@ -54,9 +57,6 @@ int main(int argc, char **argv)
 	int c, err;
 	double freq = 1;
 	char EventCodeStr[PAPI_MAX_STR_LEN] = "PAPI_TOT_INS";
-	char EventDescr[PAPI_MAX_STR_LEN];
-	char EventLabel[20];
-	char *cmd;
 
 	while (1) {
 		static struct option long_options[] = {
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 	}
 
 	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrm.log.perfwrapper") == 0);
+	assert(nrm_log_init(stderr, "nrm.extra.perf") == 0);
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
@@ -123,16 +123,15 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	// create scope
-	scope = nrm_scope_create();
+	nrm_extra_find_allowed_scope(client, "nrm.extra.perf", &scope,
+	                             &custom_scope);
 	nrm_log_debug("NRM scope initialized.\n");
 
-	// create sensor
-	const char *name = "nrm.sensor.perfwrapper";
-	sensor = nrm_sensor_create(name);
-
-	// client add scope, sensor
-	assert(nrm_client_add_scope(client, scope) == 0);
+	/* create our sensor and add it to the daemon */
+	char *sensor_name;
+	assert(nrm_extra_create_name("nrm.extra.perf", &sensor_name) == 0);
+	sensor = nrm_sensor_create(sensor_name);
+	free(sensor_name);
 	assert(nrm_client_add_sensor(client, sensor) == 0);
 
 	// initialize PAPI
@@ -172,7 +171,7 @@ int main(int argc, char **argv)
 	        EventCodeStr, EventCode);
 
 	/* launch? command, sample counters */
-	unsigned long long counter, total = 0;
+	long long counter, total = 0;
 
 	int pid = fork();
 	if (pid < 0) {
@@ -244,6 +243,12 @@ int main(int argc, char **argv)
 	/* final send here */
 	PAPI_stop(EventSet, &counter);
 	nrm_client_send_event(client, time, sensor, scope, total);
+
+	/* if we had to add the scope to the daemon, make sure to clean up after
+	 * ourselves
+	 */
+	if (custom_scope)
+		nrm_client_remove_scope(client, scope);
 
 	/* finalize program */
 	nrm_scope_destroy(scope);

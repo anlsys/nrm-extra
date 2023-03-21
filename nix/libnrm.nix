@@ -1,4 +1,4 @@
-{ stdenv, autoreconfHook, pkgconfig, zeromq, czmq, jansson, check, protobufc, git }:
+{ stdenv, autoreconfHook, pkgconfig, zeromq, czmq, jansson, check, protobufc, git, hwloc }:
 stdenv.mkDerivation {
   src = fetchGit {
     url = "https://github.com/anlsys/libnrm.git";
@@ -7,5 +7,6 @@ stdenv.mkDerivation {
   name = "libnrm";
   prePatch = "echo 0.8.0 > .tarball-version";
   nativeBuildInputs = [ autoreconfHook pkgconfig git ];
-  buildInputs = [ zeromq czmq jansson check protobufc ];
+  buildInputs = [ czmq jansson check protobufc hwloc ];
+  propagatedBuildInputs = [ zeromq ];
 }

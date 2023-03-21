@@ -111,7 +111,7 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 	nrm_init(NULL, NULL);
 	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
 
-	scope = nrm_scope_create();
+	scope = nrm_scope_create("nrm.pmpi.global");
 	nrm_scope_threadshared(scope);
 	nrm_client_add_scope(client, scope);
 

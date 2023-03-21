@@ -7,7 +7,7 @@ void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type,
                                        ompt_data_t *thread_data)
 {
 	nrm_time_t nrmtime;
-	nrm_scope_t *scope = nrm_scope_create();
+	nrm_scope_t *scope = nrm_scope_create("nrm.ompt.thread");
 	thread_data->ptr = (void *)scope;
 
 	nrm_scope_threadprivate(scope);
