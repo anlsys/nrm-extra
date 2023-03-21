@@ -390,7 +390,9 @@ int main(int argc, char **argv)
 			                      event_totals[i]);
 		}
 	}
-
+	for (i = 0; i < n_custom_scopes; i++) {
+		nrm_client_remove_scope(client, custom_scopes[i]);
+	}
 	for (i = 0; i < n_cpu_scopes; i++) {
 		nrm_scope_destroy(nrm_cpu_scopes[i]);
 	}
@@ -398,11 +400,6 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_numa_scopes; i++) {
 		nrm_scope_destroy(nrm_numa_scopes[i]);
 	}
-
-	for (i = 0; i < n_custom_scopes; i++) {
-		nrm_scope_destroy(custom_scopes[i]);
-	}
-
 	nrm_log_debug("NRM scopes deleted.\n");
 
 	nrm_sensor_destroy(&sensor);
