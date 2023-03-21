@@ -18,8 +18,8 @@
  * system include files
  *****************************************************************************/
 
-//#include <stdint.h>
-//#include <stddef.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /*****************************************************************************
  * iteration macros

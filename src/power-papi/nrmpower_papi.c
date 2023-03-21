@@ -34,12 +34,15 @@
 
 #include <nrm.h>
 
-static int log_level = 0;
+#include "extra.h"
+
+static int log_level = NRM_LOG_DEBUG;
 volatile sig_atomic_t stop;
 
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
+static int custom_scope = 0;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -133,7 +136,7 @@ int main(int argc, char **argv)
 	}
 
 	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrm.log.power-papi") == 0);
+	assert(nrm_log_init(stderr, "nrm.extra.papi") == 0);
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
@@ -216,66 +219,82 @@ int main(int argc, char **argv)
 	hwloc_cpuset_t cpus;
 
 	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS],
-	        *nrm_numa_scopes[MAX_MEASUREMENTS];
+	        *nrm_numa_scopes[MAX_MEASUREMENTS],
+	        *custom_scopes[MAX_MEASUREMENTS];
+
 	int n_energy_events = 0, n_scopes = 0, n_numa_scopes = 0,
-	    n_cpu_scopes = 0, cpu_idx, cpu, numa_id;
+	    n_cpu_scopes = 0, n_custom_scopes = 0, cpu_idx, cpu, numa_id;
 	char *event;
+	char *scope_name;
 
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
+
+	int added;
 
 	// INSTEAD: create a scope for each measure-able event, with
 	// corresponding indexes
 	for (i = 0; i < num_events; i++) {
 		event = EventNames[i];
 
+		// need to create custom scope name first out of available
+		// information, then scope
 		if (is_energy_event(event, DataTypes[i])) {
 			n_energy_events++;
-			scope = nrm_scope_create("nrm.papi.dummy");
 			numa_id = parse_numa_id(event); // should match
 			                                // NUMANODE's logical ID
 			nrm_log_debug("energy event detected.\n",
 			              n_energy_events);
 
 			if (is_NUMA_event(event)) {
+				err = nrm_extra_create_name_ssu("nrm.papi",
+				                                "numa", numa_id,
+				                                &scope_name);
+				nrm_log_debug("Creating new scope: %s\n",
+				              scope_name);
+
+				scope = nrm_scope_create(scope_name);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
 				              numa_id);
+				nrm_extra_find_scope(client, &scope, &added);
+				free(scope_name);
 				nrm_numa_scopes[numa_id] = scope;
 				n_numa_scopes++;
-				nrm_log_debug("NUMA energy event detected.\n",
-				              n_energy_events);
+			} else { // need NUMANODE object to parse CPU
+				 // indexes
+				err = nrm_extra_create_name_ssu("nrm.papi",
+				                                "cpu", numa_id,
+				                                &scope_name);
+				nrm_log_debug("Creating new scope: %s\n",
+				              scope_name);
 
-			} else { // need NUMANODE object to parse CPU indexes
+				scope = nrm_scope_create(scope_name);
 				numanode = hwloc_get_obj_by_type(
 				        topology, HWLOC_OBJ_NUMANODE, numa_id);
 				cpus = numanode->cpuset;
-
-				// adds matching logical cpu indexes to cpu
-				// scope
 				hwloc_bitmap_foreach_begin(cpu, cpus)
 				        cpu_idx = get_cpu_idx(topology, cpu);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-				              cpu_idx); //
+				              cpu_idx);
 				hwloc_bitmap_foreach_end();
-
+				nrm_extra_find_scope(client, &scope, &added);
+				free(scope_name);
 				nrm_cpu_scopes[numa_id] = scope;
 				n_cpu_scopes++;
-				nrm_log_debug("CPU energy event detected.\n",
-				              n_energy_events);
 			}
-			nrm_log_debug("about to add scope to client.\n",
-			              n_energy_events);
-			nrm_client_add_scope(client, scope);
+			if (added) {
+				custom_scopes[numa_id] = scope;
+				n_custom_scopes++;
+			}
 			n_scopes++;
-			nrm_log_debug("new scope added to client.\n",
-			              n_energy_events);
 		}
 	}
 
 	nrm_log_debug("%d candidate energy events detected.\n",
 	              n_energy_events);
-	nrm_log_debug("%d NRM scopes initialized (%d NUMA and %d CPU)\n",
-	              n_scopes, n_numa_scopes, n_cpu_scopes);
+	nrm_log_debug(
+	        "%d NRM scopes initialized (%d NUMA, %d CPU, %d custom)\n",
+	        n_scopes, n_numa_scopes, n_cpu_scopes, n_custom_scopes);
 
 	long long *event_values;
 	nrm_time_t before_time, after_time;
@@ -289,7 +308,7 @@ int main(int argc, char **argv)
 	stop = 0;
 	double sleeptime = 1 / freq;
 
-	do {
+	while (true) {
 
 		nrm_time_gettime(&before_time);
 
@@ -300,10 +319,11 @@ int main(int argc, char **argv)
 		req.tv_sec = ceil(sleeptime);
 		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
 
-		do {
-			err = nanosleep(&req, &rem);
-			req = rem;
-		} while (err == -1 && errno == EINTR);
+		err = nanosleep(&req, &rem);
+		if (err == -1 && errno == EINTR) {
+			nrm_log_error("interupted during sleep, exiting\n");
+			break;
+		}
 
 		nrm_time_gettime(&after_time);
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
@@ -333,12 +353,16 @@ int main(int argc, char **argv)
 					        EventNames[i], event_values[i],
 					        event_totals[i]);
 				}
-				nrm_client_send_event(client, after_time,
-				                      sensor, scope,
-				                      event_totals[i]);
+				err = nrm_client_send_event(client, after_time,
+				                            sensor, scope,
+				                            event_totals[i]);
 			}
 		}
-	} while (!stop);
+		if (err == -1 || errno == EINTR) {
+			nrm_log_error("Interrupted. Exiting\n");
+			break;
+		}
+	}
 
 	int papi_status;
 	assert(PAPI_state(EventSet, &papi_status) == PAPI_OK);
@@ -366,15 +390,16 @@ int main(int argc, char **argv)
 			                      event_totals[i]);
 		}
 	}
-
-	for (i = 0; i < MAX_MEASUREMENTS; i++) {
+	for (i = 0; i < n_custom_scopes; i++) {
+		nrm_client_remove_scope(client, custom_scopes[i]);
+	}
+	for (i = 0; i < n_cpu_scopes; i++) {
 		nrm_scope_destroy(nrm_cpu_scopes[i]);
 	}
 
-	for (i = 0; i < MAX_MEASUREMENTS; i++) {
+	for (i = 0; i < n_numa_scopes; i++) {
 		nrm_scope_destroy(nrm_numa_scopes[i]);
 	}
-
 	nrm_log_debug("NRM scopes deleted.\n");
 
 	nrm_sensor_destroy(&sensor);
