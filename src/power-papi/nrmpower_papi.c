@@ -353,10 +353,13 @@ int main(int argc, char **argv)
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
 				}
+<<<<<<<< HEAD:src/power_papi/nrmpower_papi.c
 				nrm_log_debug(
 				        "%-45s%4i uj (Total Power %f W)\n",
 				        EventNames[i], event_values[i],
 				        event_totals[i]);
+========
+>>>>>>>> master:src/power-papi/nrmpower_papi.c
 				err = nrm_client_send_event(client, after_time,
 				                            sensor, scope,
 				                            event_totals[i]);
@@ -398,7 +401,6 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_custom_scopes; i++) {
 		nrm_client_remove_scope(client, custom_scopes[i]);
 	}
-
 	for (i = 0; i < n_cpu_scopes; i++) {
 		nrm_scope_destroy(nrm_cpu_scopes[i]);
 	}
@@ -406,7 +408,6 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_numa_scopes; i++) {
 		nrm_scope_destroy(nrm_numa_scopes[i]);
 	}
-
 	nrm_log_debug("NRM scopes deleted.\n");
 
 	nrm_sensor_destroy(&sensor);

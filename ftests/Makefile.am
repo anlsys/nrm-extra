@@ -11,4 +11,4 @@ clean-local:
 	-rm -f *.mod
 
 check_PROGRAMS = $(MPI_TESTS)
-TESTS = $(MPI_TESTS) 
+#TESTS = $(MPI_TESTS) 

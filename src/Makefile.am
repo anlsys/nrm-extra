@@ -16,10 +16,10 @@ nrm_perfwrapper_LDADD = libcommon.la
 nrm_perfwrapper_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@
 nrm_perfwrapper_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@
 
-nrm_power_papi_SOURCES = power_papi/nrmpower_papi.c
+nrm_power_papi_SOURCES = power-papi/nrmpower_papi.c
 nrm_power_papi_LDADD = libcommon.la
-nrm_power_papi_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@
-nrm_power_papi_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@
+nrm_power_papi_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@ @HWLOC_CFLAGS@
+nrm_power_papi_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@ @HWLOC_LIBS@
 
 nrm_power_variorum_SOURCES = power_variorum/nrmpower_variorum.c
 nrm_power_variorum_LDADD = libcommon.la
