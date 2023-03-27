@@ -58,7 +58,7 @@ jobs:
           cd nrm-extra
           export PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/bin:$PATH
           export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
-          nrmd fromenv 2> /dev/null &
+          nrmd 2> /dev/null &
           make check
           make install
       - uses: actions/upload-artifact@v2
