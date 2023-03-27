@@ -1,4 +1,4 @@
-SUBDIRS = mpi omp powerwrapper_papi powerwrapper_variorum
+SUBDIRS = omp powerwrapper_papi powerwrapper_variorum
 
 COMMON_CFLAGS = @LIBNRM_CFLAGS@ -I$(top_srcdir)/src/common
 COMMON_LDFLAGS = @LIBNRM_LIBS@
