@@ -123,4 +123,3 @@ int nrm_extra_find_scope(nrm_client_t *client, nrm_scope_t **scope, int *added)
 	*added = !newscope;
 	return 0;
 }
-
