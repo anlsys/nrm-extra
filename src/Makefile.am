@@ -16,16 +16,15 @@ nrm_perfwrapper_LDADD = libcommon.la
 nrm_perfwrapper_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@
 nrm_perfwrapper_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@
 
-lib_LTLIBRARIES = libnrm-pmpi.la
-
-libnrm-pmpi_CFLAGS = @LIBNRM_CFLAGS@
-libnrm-pmpi_LDFLAGS = -export-symbols-regex '^(MPI|mpi)_' @MPILIBS@ @LIBNRM_LIBS@
-
-CC=@MPICC@
-
 libnrm_pmpi_la_SOURCES = mpi/c_mpi_bindings.c \
 			 mpi/f_mpi_bindings.c \
 			 mpi/mpi_api.c \
 			 mpi/nrm_mpi.h
+
+lib_LTLIBRARIES = libnrm-pmpi.la
+libnrm-pmpi_CFLAGS = @LIBNRM_CFLAGS@
+libnrm-pmpi_LDFLAGS = "-export-symbols-regex '^(MPI|mpi)_'" @MPILIBS@ @LIBNRM_LIBS@
+
+CC=@MPICC@
 
 bin_PROGRAMS = nrm-perfwrapper
