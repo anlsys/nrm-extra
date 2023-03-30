@@ -35,3 +35,5 @@ config.status
 libtool
 *.log
 *.trs
+*.deps
+*.DS_Store
