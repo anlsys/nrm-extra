@@ -1,4 +1,4 @@
-SUBDIRS = mpi omp
+SUBDIRS = omp
 
 COMMON_CFLAGS = @LIBNRM_CFLAGS@ -I$(top_srcdir)/src/common
 COMMON_LDFLAGS = @LIBNRM_LIBS@
