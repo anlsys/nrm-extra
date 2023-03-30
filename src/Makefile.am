@@ -1,4 +1,4 @@
-SUBDIRS = omp power_papi power_variorum
+SUBDIRS = mpi omp
 
 COMMON_CFLAGS = @LIBNRM_CFLAGS@ -I$(top_srcdir)/src/common
 COMMON_LDFLAGS = @LIBNRM_LIBS@
@@ -21,16 +21,21 @@ nrm_power_papi_LDADD = libcommon.la
 nrm_power_papi_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@ @HWLOC_CFLAGS@
 nrm_power_papi_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@ @HWLOC_LIBS@
 
+nrm_power_variorum_SOURCES = power_variorum/nrmpower_variorum.c
+nrm_power_variorum_LDADD = libcommon.la
+nrm_power_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @HWLOC_CFLAGS@ @JANSSON_CFLAGS@
+nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
+
 lib_LTLIBRARIES = libnrm-pmpi.la
 
 libnrm_pmpi_la_SOURCES = mpi/c_mpi_bindings.c \
-			 mpi/f_mpi_bindings.c \
-			 mpi/mpi_api.c \
-			 mpi/nrm_mpi.h
+mpi/f_mpi_bindings.c \
+mpi/mpi_api.c \
+mpi/nrm_mpi.h
 
 libnrm_pmpi_la_CFLAGS = @LIBNRM_CFLAGS@
 libnrm_pmpi_la_LDFLAGS = "-export-symbols-regex '^(MPI|mpi)_'" @MPILIBS@ @LIBNRM_LIBS@
 
 CC=@MPICC@
 
-bin_PROGRAMS = nrm-perfwrapper nrm-power-papi
+bin_PROGRAMS = nrm-perfwrapper nrm-power-papi nrm-power-variorum
