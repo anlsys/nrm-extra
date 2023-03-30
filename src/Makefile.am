@@ -23,7 +23,7 @@ nrm_power_papi_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@ @HWLOC_LIBS@
 
 nrm_power_variorum_SOURCES = power_variorum/nrmpower_variorum.c
 nrm_power_variorum_LDADD = libcommon.la
-nrm_power_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @JANSSON_CFLAGS@
-nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @JANSSON_LIBS@
+nrm_power_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @HWLOC_CFLAGS@ @JANSSON_CFLAGS@
+nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
 
 bin_PROGRAMS = nrm-perfwrapper nrm-power-papi nrm-power-variorum
