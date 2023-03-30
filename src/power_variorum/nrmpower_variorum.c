@@ -34,6 +34,8 @@
 
 #include <nrm.h>
 
+#include "extra.h"
+
 static int log_level = 0;
 volatile sig_atomic_t stop;
 
@@ -81,10 +83,11 @@ int main(int argc, char **argv)
 		static struct option long_options[] = {
 		        {"verbose", no_argument, &log_level, 1},
 		        {"help", no_argument, 0, 'h'},
+		        {"frequency", required_argument, 0, 'f'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "vh", long_options,
+		char_opt = getopt_long(argc, argv, "vhf:", long_options,
 		                       &option_index);
 
 		if (char_opt == -1)
@@ -94,6 +97,9 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
+			break;
+		case 'f':
+			freq = strtod(optarg, NULL);
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
@@ -139,10 +145,12 @@ int main(int argc, char **argv)
 	hwloc_cpuset_t cpus;
 
 	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS],
-	        *nrm_numa_scopes[MAX_MEASUREMENTS];
-	int i, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0, cpu_idx, cpu,
-	       numa_id;
+	        *nrm_numa_scopes[MAX_MEASUREMENTS],
+	        *custom_scopes[MAX_MEASUREMENTS];
+	int i, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0,
+	       n_custom_scopes = 0, cpu_idx, cpu, numa_id, added;
 	const char *key, *json_soutput;
+	char *scope_name;
 	json_t *value, *json_measurements = json_object();
 	double *value_totals;
 
@@ -155,7 +163,6 @@ int main(int argc, char **argv)
 	{
 		// variorum inits un-measureable as -1.0, measureable as 0.0
 		if (strstr(key, "socket") && (json_real_value(value) != -1.0)) {
-			scope = nrm_scope_create("nrm.var.dummy");
 			numa_id = key[strlen(key) - 1] - '0';
 
 			if (strstr(key, "power_cpu_watts")) { // need NUMANODE
@@ -165,22 +172,37 @@ int main(int argc, char **argv)
 				        topology, HWLOC_OBJ_NUMANODE, numa_id);
 				cpus = numanode->cpuset;
 
+				err = nrm_extra_create_name_ssu("nrm.variorum",
+				                                "cpu", numa_id,
+				                                &scope_name);
+
+				scope = nrm_scope_create(scope_name);
 				hwloc_bitmap_foreach_begin(cpu, cpus)
 				        cpu_idx = get_cpu_idx(topology, cpu);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
 				              cpu_idx);
 				hwloc_bitmap_foreach_end();
-
+				nrm_extra_find_scope(client, &scope, &added);
+				free(scope_name);
 				nrm_cpu_scopes[numa_id] = scope;
 				n_cpu_scopes++;
 
 			} else if (strstr(key, "power_mem_watts")) {
+				err = nrm_extra_create_name_ssu("nrm.variorum",
+				                                "numa", numa_id,
+				                                &scope_name);
+				scope = nrm_scope_create(scope_name);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
 				              numa_id);
+				nrm_extra_find_scope(client, &scope, &added);
+				free(scope_name);
 				nrm_numa_scopes[numa_id] = scope;
 				n_numa_scopes++;
 			}
-			nrm_client_add_scope(client, scope);
+			if (added) {
+				custom_scopes[numa_id] = scope;
+				n_custom_scopes++;
+			}
 			n_scopes++;
 		}
 	}
@@ -208,10 +230,11 @@ int main(int argc, char **argv)
 		req.tv_sec = ceil(sleeptime);
 		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
 
-		do {
-			err = nanosleep(&req, &rem);
-			req = rem;
-		} while (err == -1 && errno == EINTR);
+		err = nanosleep(&req, &rem);
+		if (err == -1 && errno == EINTR) {
+			nrm_log_error("interupted during sleep, exiting\n");
+			break;
+		}
 
 		nrm_time_gettime(&after_time);
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
@@ -259,6 +282,10 @@ int main(int argc, char **argv)
 
 	/* final send here */
 	/* finalize program */
+
+	for (i = 0; i < n_custom_scopes; i++) {
+		nrm_client_remove_scope(client, custom_scopes[i]);
+	}
 
 	for (i = 0; i < n_cpu_scopes; i++) {
 		nrm_scope_destroy(nrm_cpu_scopes[i]);

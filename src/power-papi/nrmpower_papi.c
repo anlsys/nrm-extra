@@ -110,10 +110,11 @@ int main(int argc, char **argv)
 		static struct option long_options[] = {
 		        {"verbose", no_argument, &log_level, 1},
 		        {"help", no_argument, 0, 'h'},
+		        {"frequency", required_argument, 0, 'f'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "vh", long_options,
+		char_opt = getopt_long(argc, argv, "vhf:", long_options,
 		                       &option_index);
 
 		if (char_opt == -1)
@@ -123,6 +124,9 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
+			break;
+		case 'f':
+			freq = strtod(optarg, NULL);
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
@@ -348,11 +352,12 @@ int main(int argc, char **argv)
 					scope = nrm_numa_scopes[numa_id];
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
-					nrm_log_debug(
-					        "%-45s%4.2f J (Total Power %.2fW)\n",
-					        EventNames[i], event_values[i],
-					        event_totals[i]);
 				}
+				nrm_log_debug(
+				        "%-45s%4i uj (Total Power %f W)\n",
+				        EventNames[i], event_values[i],
+				        event_totals[i]);
+
 				err = nrm_client_send_event(client, after_time,
 				                            sensor, scope,
 				                            event_totals[i]);
@@ -390,6 +395,7 @@ int main(int argc, char **argv)
 			                      event_totals[i]);
 		}
 	}
+
 	for (i = 0; i < n_custom_scopes; i++) {
 		nrm_client_remove_scope(client, custom_scopes[i]);
 	}
