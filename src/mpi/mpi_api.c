@@ -30,8 +30,8 @@
 #include <stdlib.h> // exit, atoi
 
 #include "nrm.h"
-#include "extra.h"
 
+#include "extra.h"
 #include "nrm_mpi.h"
 
 static nrm_client_t *client;
