@@ -33,7 +33,7 @@ mpi/f_mpi_bindings.c \
 mpi/mpi_api.c \
 mpi/nrm_mpi.h
 
-libnrm_pmpi_la_LDADD = libcommon.la
+libnrm_pmpi_la_LIBADD = libcommon.la
 libnrm_pmpi_la_CFLAGS = @LIBNRM_CFLAGS@ $(COMMON_CFLAGS)
 libnrm_pmpi_la_LDFLAGS = "-export-symbols-regex '^(MPI|mpi)_'" @MPILIBS@ @LIBNRM_LIBS@ $(COMMON_LDFLAGS)
 

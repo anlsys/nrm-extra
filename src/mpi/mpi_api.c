@@ -122,7 +122,6 @@ NRM_MPI_DECL(MPI_Init, int, int *argc, char ***argv)
 	char *name = "nrm-mpi-init";
 	sensor = nrm_sensor_create(name);
 	nrm_client_add_sensor(client, sensor);
-	free(name);
 
 	return ret;
 }
