@@ -55,8 +55,6 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 src/mpi/Makefile
-         src/powerwrapper_papi/Makefile
-         src/powerwrapper_variorum/Makefile
 		 ctests/Makefile
 		 ctests/mpi/Makefile
 		 ctests/omp/Makefile
