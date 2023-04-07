@@ -28,12 +28,12 @@ nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JAN
 
 lib_LTLIBRARIES = libnrm-ompt.la
 
-nrm_ompt_la_SOURCES = omp/entrypoint.c \
+libnrm_ompt_la_SOURCES = omp/entrypoint.c \
                   nrm_omp_callbacks.c \
                   nrm_omp.h
 
-nrm_ompt_la_LDADD = libcommon.la
-nrm_ompt_la_CFLAGS = $(COMMON_CFLAGS) $(OPENMP_CFLAGS)
-nrm_ompt_la_LDFLAGS = $(COMMON_LDFLAGS) $(OPENMP_CFLAGS)
+libnrm_ompt_la_LDADD = libcommon.la
+libnrm_ompt_la_CFLAGS = $(COMMON_CFLAGS) $(OPENMP_CFLAGS)
+libnrm_ompt_la_LDFLAGS = $(COMMON_LDFLAGS) $(OPENMP_CFLAGS)
 
 bin_PROGRAMS = nrm-perfwrapper nrm-power-papi nrm-power-variorum
