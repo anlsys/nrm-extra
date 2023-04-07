@@ -12,8 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "nrm_omp.h"
 #include "extra.h"
+#include "nrm_omp.h"
 
 static ompt_start_tool_result_t nrm_ompt_start;
 ompt_set_callback_t nrm_ompt_set_callback;
@@ -66,8 +66,7 @@ void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
 	if (global_added)
 		nrm_client_remove_scope(global_client, global_scope);
-	nrm_scope_create(&global_scope)
-	nrm_client_destroy(&global_client);
+	nrm_scope_create(&global_scope) nrm_client_destroy(&global_client);
 	nrm_finalize();
 	return;
 }

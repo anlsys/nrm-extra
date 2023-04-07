@@ -1,8 +1,8 @@
 /* generated. See extra/omp */
 #include <assert.h>
 
-#include "nrm_omp.h"
 #include "extra.h"
+#include "nrm_omp.h"
 
 struct omp_scopeinfo_s {
 	nrm_scope_t *scope;
