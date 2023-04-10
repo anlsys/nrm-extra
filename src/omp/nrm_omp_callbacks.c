@@ -1,5 +1,6 @@
 /* generated. See extra/omp */
 #include <assert.h>
+#include <stdlib.h>
 
 #include "extra.h"
 #include "nrm_omp.h"
