@@ -66,7 +66,7 @@ void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
 	if (global_added)
 		nrm_client_remove_scope(global_client, global_scope);
-	nrm_scope_destroy(&global_scope);
+	nrm_scope_destroy(global_scope);
 	nrm_client_destroy(&global_client);
 	nrm_finalize();
 	return;
