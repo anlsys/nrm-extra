@@ -33,7 +33,7 @@ libnrm_ompt_la_SOURCES = omp/entrypoint.c \
                   nrm_omp.h
 
 libnrm_ompt_la_LIBADD = libcommon.la
-libnrm_ompt_la_CFLAGS = $(COMMON_CFLAGS) $(OPENMP_CFLAGS)
-libnrm_ompt_la_LDFLAGS = $(COMMON_LDFLAGS) $(OPENMP_CFLAGS)
+libnrm_ompt_la_CFLAGS = $(COMMON_CFLAGS) $(OPENMP_CFLAGS) @LIBNRM_CFLAGS@
+libnrm_ompt_la_LDFLAGS = $(COMMON_LDFLAGS) $(OPENMP_CFLAGS) @LIBNRM_LIBS@
 
 bin_PROGRAMS = nrm-perfwrapper nrm-power-papi nrm-power-variorum
