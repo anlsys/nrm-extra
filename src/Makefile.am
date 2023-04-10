@@ -29,8 +29,8 @@ nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JAN
 lib_LTLIBRARIES = libnrm-ompt.la
 
 libnrm_ompt_la_SOURCES = omp/entrypoint.c \
-                  nrm_omp_callbacks.c \
-                  nrm_omp.h
+                  omp/nrm_omp_callbacks.c \
+                  omp/nrm_omp.h
 
 libnrm_ompt_la_LIBADD = libcommon.la
 libnrm_ompt_la_CFLAGS = $(COMMON_CFLAGS) $(OPENMP_CFLAGS) @LIBNRM_CFLAGS@
