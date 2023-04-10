@@ -11,6 +11,8 @@
 #ifndef NRM_EXTRA_H
 #define NRM_EXTRA_H 1
 
+#include "nrm.h"
+
 int nrm_extra_create_name(const char *pattern, char **name);
 int nrm_extra_create_name_ssu(const char *pattern,
                               const char *extra,
