@@ -5,50 +5,13 @@
 #include "extra.h"
 #include "nrm_omp.h"
 
-struct omp_scopeinfo_s {
-	nrm_scope_t *scope;
-	int *added;
-};
-
 void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type,
                                        ompt_data_t *thread_data)
 {
-	nrm_time_t nrmtime;
-	int *added;
-	nrm_scope_t *scope = nrm_scope_create("nrm.ompt.thread");
-	nrm_extra_find_scope(global_client, &scope, added);
-
-	omp_scopeinfo_t *scopeinfo = calloc(1, sizeof(omp_scopeinfo_t));
-	scopeinfo->scope = scope;
-	scopeinfo->added = added;
-
-	thread_data->ptr = (void *)scopeinfo;
-
-	nrm_scope_threadprivate(scope);
-
-	nrm_scope_threadshared(global_scope);
-
-	nrm_time_gettime(&nrmtime);
-	nrm_client_send_event(global_client, nrmtime, global_sensor, scope, 1);
 }
 
 void nrm_ompt_callback_thread_end_cb(ompt_data_t *thread_data)
 {
-	nrm_time_t nrmtime;
-	nrm_scope_t *scope;
-	int *added;
-	omp_scopeinfo_t *scopeinfo = (omp_scopeinfo_t *)thread_data->ptr;
-	scope = scopeinfo->scope;
-	added = scopeinfo->added;
-
-	nrm_scope_threadprivate(scope);
-
-	nrm_time_gettime(&nrmtime);
-	nrm_client_send_event(global_client, nrmtime, global_sensor, scope, 1);
-	if (&added)
-		nrm_client_remove_scope(global_client, scope);
-	nrm_scope_destroy(scope);
-	thread_data->ptr = NULL;
 }
 
 void nrm_ompt_callback_parallel_begin_cb(

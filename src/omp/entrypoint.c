@@ -34,13 +34,14 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	ompt_set_result_t ret;
 
 	nrm_init(NULL, NULL);
+	nrm_log_init(stderr, "nrm-ompt");
+	nrm_log_setlevel(NRM_LOG_DEBUG);
 
 	// initialize global client
 	nrm_client_create(&global_client, upstream_uri, pub_port, rpc_port);
 
 	// create global scope;
-	global_scope = nrm_scope_create("nrm.ompt.global");
-	nrm_extra_find_scope(global_client, &global_scope, &global_added);
+	nrm_extra_find_allowed_scope(global_client, "nrm.ompt.global", &global_scope, &global_added);
 
 	// global sensor
 	char *name = "nrm-ompt";
@@ -52,11 +53,10 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	/* use the lookup function to retrieve a function pointer to
 	 * ompt_set_callback.
 	 */
-	nrm_ompt_set_callback = lookup("ompt_set_callback");
+	nrm_ompt_set_callback = (ompt_set_callback_t) lookup("ompt_set_callback");
 	assert(nrm_ompt_set_callback != NULL);
 
 	nrm_ompt_register_cbs();
-	free(name);
 
 	/* spec dictates that we return non-zero to keep the tool active */
 	return 1;
@@ -67,6 +67,8 @@ void nrm_ompt_finalize(ompt_data_t *tool_data)
 	if (global_added)
 		nrm_client_remove_scope(global_client, global_scope);
 	nrm_scope_destroy(global_scope);
+	nrm_client_remove_sensor(global_client, global_sensor);
+	nrm_sensor_destroy(&global_sensor);
 	nrm_client_destroy(&global_client);
 	nrm_finalize();
 	return;
