@@ -26,6 +26,12 @@ int global_added;
 nrm_client_t *global_client;
 nrm_scope_t *global_scope;
 nrm_sensor_t *global_sensor;
+ompt_finalize_tool_t nrm_finalizer;
+
+void nrm_ompt_atexit(void)
+{
+	nrm_finalizer();
+}
 
 int nrm_ompt_initialize(ompt_function_lookup_t lookup,
                         int initial_device_num,
@@ -36,12 +42,14 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	nrm_init(NULL, NULL);
 	nrm_log_init(stderr, "nrm-ompt");
 	nrm_log_setlevel(NRM_LOG_DEBUG);
+	nrm_log_debug("initialize tool\n");
 
 	// initialize global client
 	nrm_client_create(&global_client, upstream_uri, pub_port, rpc_port);
 
 	// create global scope;
-	nrm_extra_find_allowed_scope(global_client, "nrm.ompt.global", &global_scope, &global_added);
+	nrm_extra_find_allowed_scope(global_client, "nrm.ompt.global",
+	                             &global_scope, &global_added);
 
 	// global sensor
 	char *name = "nrm-ompt";
@@ -53,10 +61,22 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 	/* use the lookup function to retrieve a function pointer to
 	 * ompt_set_callback.
 	 */
-	nrm_ompt_set_callback = (ompt_set_callback_t) lookup("ompt_set_callback");
+	nrm_ompt_set_callback =
+	        (ompt_set_callback_t)lookup("ompt_set_callback");
 	assert(nrm_ompt_set_callback != NULL);
 
 	nrm_ompt_register_cbs();
+
+	/* czmq registers an atexit function that ends up being called earlier
+	 * than ompt_finalize, as OpenMP relies on return from main too to
+	 * trigger it.
+	 *
+	 * The solution is to register an atexit after czmq, to call the
+	 * finalizer before zsys_shutdown.
+	 */
+	nrm_finalizer = lookup("ompt_finalize_tool");
+	assert(nrm_finalizer != NULL);
+	atexit(nrm_ompt_atexit);
 
 	/* spec dictates that we return non-zero to keep the tool active */
 	return 1;
@@ -64,6 +84,7 @@ int nrm_ompt_initialize(ompt_function_lookup_t lookup,
 
 void nrm_ompt_finalize(ompt_data_t *tool_data)
 {
+	nrm_log_debug("finalize tool\n");
 	if (global_added)
 		nrm_client_remove_scope(global_client, global_scope);
 	nrm_scope_destroy(global_scope);
