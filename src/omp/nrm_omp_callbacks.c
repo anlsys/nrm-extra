@@ -1,33 +1,17 @@
 /* generated. See extra/omp */
 #include <assert.h>
+#include <stdlib.h>
 
+#include "extra.h"
 #include "nrm_omp.h"
 
 void nrm_ompt_callback_thread_begin_cb(ompt_thread_t thread_type,
                                        ompt_data_t *thread_data)
 {
-	nrm_time_t nrmtime;
-	nrm_scope_t *scope = nrm_scope_create("nrm.ompt.thread");
-	thread_data->ptr = (void *)scope;
-
-	nrm_scope_threadprivate(scope);
-
-	nrm_scope_threadshared(global_scope);
-
-	nrm_time_gettime(&nrmtime);
-	nrm_client_send_event(global_client, nrmtime, global_sensor, scope, 1);
 }
 
 void nrm_ompt_callback_thread_end_cb(ompt_data_t *thread_data)
 {
-	nrm_time_t nrmtime;
-	nrm_scope_t *scope = (nrm_scope_t *)thread_data->ptr;
-	nrm_scope_threadprivate(scope);
-
-	nrm_time_gettime(&nrmtime);
-	nrm_client_send_event(global_client, nrmtime, global_sensor, scope, 1);
-	nrm_scope_destroy(scope);
-	thread_data->ptr = NULL;
 }
 
 void nrm_ompt_callback_parallel_begin_cb(

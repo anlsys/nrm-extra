@@ -115,7 +115,9 @@ jobs:
       - name: make check
         run: |
           cd nrm-extra/out
+          export PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/bin:$PATH
           export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
+          nrmd 2> /dev/null &
           make check
           make install
       - uses: actions/upload-artifact@v2
@@ -176,10 +178,12 @@ jobs:
       - name: make distcheck
         run: |
           cd nrm-extra
+          export PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/bin:$PATH
           export PKG_CONFIG_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib/pkgconfig:$PKG_CONFIG_PATH
           export LD_LIBRARY_PATH=$GITHUB_WORKSPACE/$INSTALL_PATH/lib:$LD_LIBRARY_PATH
           export VARIORUM_CFLAGS=-I$GITHUB_WORKSPACE/$INSTALL_PATH/include
           export VARIORUM_LIBS="-L$GITHUB_WORKSPACE/$INSTALL_PATH/lib -lvariorum"
+          nrmd 2> /dev/null &
           make distcheck
       - uses: actions/upload-artifact@v2
         if: failure()
