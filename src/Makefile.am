@@ -27,6 +27,11 @@ nrm_power_variorum_LDADD = libcommon.la
 nrm_power_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @HWLOC_CFLAGS@ @JANSSON_CFLAGS@
 nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
 
+nrm_power_geopm_SOURCES = power_geopm/nrmpower_geopm.c
+nrm_power_geopm_LDADD = libcommon.la
+nrm_power_geopm_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @HWLOC_CFLAGS@ @JANSSON_CFLAGS@
+nrm_power_geopm_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
+
 lib_LTLIBRARIES = libnrm-ompt.la
 
 libnrm_ompt_la_SOURCES = omp/entrypoint.c \
@@ -37,4 +42,4 @@ libnrm_ompt_la_LIBADD = libcommon.la
 libnrm_ompt_la_CFLAGS = $(COMMON_CFLAGS) $(OPENMP_CFLAGS) @LIBNRM_CFLAGS@
 libnrm_ompt_la_LDFLAGS = $(COMMON_LDFLAGS) $(OPENMP_CFLAGS) @LIBNRM_LIBS@
 
-bin_PROGRAMS = nrm-perfwrapper nrm-power-papi nrm-power-variorum
+bin_PROGRAMS = nrm-perfwrapper nrm-power-papi nrm-power-variorum nrm-power-geopm

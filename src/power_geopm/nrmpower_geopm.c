@@ -20,7 +20,6 @@
 #include <getopt.h>
 #include <hwloc.h>
 #include <math.h>
-#include <papi.h>
 #include <sched.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -33,6 +32,7 @@
 #include <unistd.h>
 
 #include <nrm.h>
+#include <geopm_pio.h>
 
 #include "extra.h"
 
@@ -51,6 +51,7 @@ static int rpc_port = 3456;
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
+		"			 -s	 --signal			 GEOPM Signal name. Default: CPU_POWER\n"
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
@@ -64,16 +65,6 @@ void interrupt(int signum)
 	stop = 1;
 }
 
-bool is_energy_event(char *event_name, uint64_t data_type)
-{
-	return (strstr(event_name, "ENERGY_UJ") &&
-	        (data_type == PAPI_DATATYPE_UINT64));
-}
-
-bool is_NUMA_event(char *event_name)
-{
-	return (strstr(event_name, "SUBZONE"));
-}
 
 double get_watts(double event_value, int64_t elapsed_time)
 {
@@ -108,6 +99,7 @@ int main(int argc, char **argv)
 	// TODO: fix "-v" not being parsed as verbose
 	while (1) {
 		static struct option long_options[] = {
+				{"signal", required_argument, 0, 's'},
 		        {"verbose", no_argument, &log_level, 1},
 		        {"help", no_argument, 0, 'h'},
 		        {"frequency", required_argument, 0, 'f'},

@@ -25,6 +25,7 @@ PKG_CHECK_MODULES([PAPI],[papi])
 PKG_CHECK_MODULES([VARIORUM],[variorum])
 PKG_CHECK_MODULES([JANSSON], [jansson])
 PKG_CHECK_MODULES([HWLOC], [hwloc])
+PKG_CHECK_MODULES([GEOPM], [geopm])
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_OPENMP
