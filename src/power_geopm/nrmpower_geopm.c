@@ -14,9 +14,12 @@
  *               and the NRM downstream interface. Resources detected via hwloc.
  */
 
+#include <stddef.h>
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
+#include <geopm_pio.h>
+#include <geopm_topo.h>
 #include <getopt.h>
 #include <hwloc.h>
 #include <math.h>
@@ -32,7 +35,6 @@
 #include <unistd.h>
 
 #include <nrm.h>
-#include <geopm_pio.h>
 
 #include "extra.h"
 
@@ -51,7 +53,8 @@ static int rpc_port = 3456;
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
-		"			 -s	 --signal			 GEOPM Signal name. Default: CPU_POWER\n"
+        "            -s	 --signals           Single GEOPM Signal name. Default: both CPU_POWER and DRAM_POWER\n"
+        "                                       Use `sudo geopmread` to determine valid signal names         \n"
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
@@ -65,20 +68,9 @@ void interrupt(int signum)
 	stop = 1;
 }
 
-
 double get_watts(double event_value, int64_t elapsed_time)
 {
 	return ((double)event_value / 1.0e6) / (elapsed_time / 1.0e9);
-}
-
-int parse_numa_id(char *event_name)
-{
-	// Extract zone number from each of the following:
-	// powercap:::ENERGY_UJ:ZONE0
-	// powercap:::ENERGY_UJ:ZONE0_SUBZONE0
-	char str_numa_id;
-	str_numa_id = event_name[25];
-	return str_numa_id - '0'; // ??? converts numa_id to integer ???
 }
 
 int get_cpu_idx(hwloc_topology_t topology, int cpu)
@@ -92,6 +84,17 @@ int main(int argc, char **argv)
 {
 	int i, j, char_opt, err;
 	double freq = 1;
+	size_t MAX_SIGNAL_NAME_LENGTH = 55;
+	nrm_vector_t *signals;
+
+	assert(nrm_vector_create(&signals, MAX_SIGNAL_NAME_LENGTH) ==
+	       NRM_SUCCESS);
+
+	nrm_init(NULL, NULL);
+	assert(nrm_log_init(stderr, "nrm.extra.geopm") == 0);
+
+	nrm_log_setlevel(log_level);
+	nrm_log_debug("NRM logging initialized.\n");
 
 	// register callback handler for interrupt
 	signal(SIGINT, interrupt);
@@ -99,20 +102,24 @@ int main(int argc, char **argv)
 	// TODO: fix "-v" not being parsed as verbose
 	while (1) {
 		static struct option long_options[] = {
-				{"signal", required_argument, 0, 's'},
+		        {"signals", required_argument, 0, 's'},
 		        {"verbose", no_argument, &log_level, 1},
 		        {"help", no_argument, 0, 'h'},
 		        {"frequency", required_argument, 0, 'f'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		char_opt = getopt_long(argc, argv, "vhf:", long_options,
+		char_opt = getopt_long(argc, argv, "s:vhf:", long_options,
 		                       &option_index);
 
 		if (char_opt == -1)
 			break;
 		switch (char_opt) {
 		case 0:
+			break;
+		case 's':
+			nrm_log_debug("Parsed signal %s\n", optarg);
+			nrm_vector_push_back(signals, &optarg);
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
@@ -131,49 +138,69 @@ int main(int argc, char **argv)
 		}
 	}
 
-	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrm.extra.papi") == 0);
-
-	nrm_log_setlevel(log_level);
-	nrm_log_debug("NRM logging initialized.\n");
-
 	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
 	nrm_log_debug("NRM client initialized.\n");
 	assert(client != NULL);
 
 	// create sensor
-	const char *name = "nrm.sensor.power-papi";
+	const char *name = "nrm.sensor.power-geopm";
 	sensor = nrm_sensor_create(name);
 
 	// client add sensor
 	assert(nrm_client_add_sensor(client, sensor) == 0);
 
-	assert(PAPI_library_init(PAPI_VER_CURRENT) == PAPI_VER_CURRENT);
-	nrm_log_debug("PAPI initialized.\n");
+	int nsignals = geopm_pio_num_signal_name();
+	assert(nsignals > 0); // just check that we can obtain signals. Already
+	                      // using strs
+
+	// we've stored all signals in vector, we need to store corresponding
+	// domain_type labels and
+	//	component idxs for those domains
+
+	size_t n_signals;
+	assert(nrm_vector_length(signals, &n_signals) == NRM_SUCCESS);
+
+	int SignalDomainTypes[n_signals],
+	        SignalDomainIndexes[n_signals][128]; // e.g. store ~128 logical
+	                                             // CPU indexes for a
+	                                             // GEOPM_DOMAIN_CPU?
+
+	int i, domain_type;
+	char *signal_name;
+	for (i = 0; i < n_signals; i++) {
+		void *p;
+		nrm_vector_get(signals, i, &p);
+		signal_name = *(char *p);
+		domain_type = geopm_pio_signal_domain_type(signal_name);
+		assert(domain_type > -1); // GEOPM_DOMAIN_INVALID = -1
+		SignalDomainTypes[i] = domain_type;
+	}
+
+	// assert(PAPI_library_init(PAPI_VER_CURRENT) == PAPI_VER_CURRENT);
+	// nrm_log_debug("PAPI initialized.\n");
 
 	/* Prepare to detect powercap PAPI component */
-	int component_id, powercap_component_id = -1, num_components;
-	const PAPI_component_info_t *component_info = NULL;
+	// int component_id, powercap_component_id = -1, num_components;
+	// const PAPI_component_info_t *component_info = NULL;
 
 	/* Detect powercap component by iterating through all components */
-	num_components = PAPI_num_components();
-	for (component_id = 0; component_id < num_components; component_id++) {
-		if ((component_info = PAPI_get_component_info(component_id)) ==
-		    NULL) {
-			nrm_log_error(
-			        "PAPI component identification failed: %s\n");
-			exit(EXIT_FAILURE);
-		}
+	// num_components = PAPI_num_components();
+	// for (component_id = 0; component_id < num_components; component_id++)
+	// { 	if ((component_info = PAPI_get_component_info(component_id)) ==
+	// 	    NULL) {
+	// 		nrm_log_error(
+	// 		        "PAPI component identification failed: %s\n");
+	// 		exit(EXIT_FAILURE);
+	// 	}
 
-		if (strstr(component_info->name, "powercap")) {
-			powercap_component_id = component_id;
-			nrm_log_debug(
-			        "PAPI found powercap component at component_id %d\n",
-			        powercap_component_id);
-			assert(!component_info->disabled);
-			break;
-		}
-	}
+	// 	if (strstr(component_info->name, "powercap")) {
+	// 		powercap_component_id = component_id;
+	// 		nrm_log_debug(
+	// 		        "PAPI found powercap component at component_id
+	// %d\n", 		        powercap_component_id);
+	// assert(!component_info->disabled); 		break;
+	// 	}
+	// }
 
 	int EventSet = PAPI_NULL;
 	assert(component_id != num_components); // Matching component ID not
@@ -243,7 +270,7 @@ int main(int argc, char **argv)
 			              n_energy_events);
 
 			if (is_NUMA_event(event)) {
-				err = nrm_extra_create_name_ssu("nrm.papi",
+				err = nrm_extra_create_name_ssu("nrm.geopm",
 				                                "numa", numa_id,
 				                                &scope_name);
 				nrm_log_debug("Creating new scope: %s\n",
@@ -258,7 +285,7 @@ int main(int argc, char **argv)
 				n_numa_scopes++;
 			} else { // need NUMANODE object to parse CPU
 				 // indexes
-				err = nrm_extra_create_name_ssu("nrm.papi",
+				err = nrm_extra_create_name_ssu("nrm.geopm",
 				                                "cpu", numa_id,
 				                                &scope_name);
 				nrm_log_debug("Creating new scope: %s\n",
