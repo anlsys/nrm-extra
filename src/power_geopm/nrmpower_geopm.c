@@ -15,6 +15,7 @@
  */
 
 #include <stddef.h>
+#include <sys/syslimits.h>
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
@@ -22,6 +23,7 @@
 #include <geopm_topo.h>
 #include <getopt.h>
 #include <hwloc.h>
+#include <limits.h>
 #include <math.h>
 #include <sched.h>
 #include <signal.h>
@@ -78,6 +80,15 @@ int get_cpu_idx(hwloc_topology_t topology, int cpu)
 	hwloc_obj_t pu;
 	pu = hwloc_get_pu_obj_by_os_index(topology, cpu);
 	return pu->logical_index;
+}
+
+char *get_domain_label(char *string)
+{
+	char *label;
+	do {
+		label = strtok(string, "_");
+	} while (label != NULL);
+	return label; // should return last token after the last underscore
 }
 
 int main(int argc, char **argv)
@@ -165,15 +176,20 @@ int main(int argc, char **argv)
 	                                             // CPU indexes for a
 	                                             // GEOPM_DOMAIN_CPU?
 
-	int i, domain_type;
-	char *signal_name;
+	int i, j, domain_type;
+	char *signal_name, *full_domain_name;
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signals, i, &p);
-		signal_name = *(char *p);
+		signal_name = *(char *)p;
 		domain_type = geopm_pio_signal_domain_type(signal_name);
-		assert(domain_type > -1); // GEOPM_DOMAIN_INVALID = -1
+		assert(domain_type >= 0); // GEOPM_DOMAIN_INVALID = -1
 		SignalDomainTypes[i] = domain_type;
+		err = geopm_topo_domain_name(domain_type, NAME_MAX,
+		                             full_domain_name);
+		char *domain_token = get_domain_label(full_domain_name);
+		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
+		              full_domain_name);
 	}
 
 	// assert(PAPI_library_init(PAPI_VER_CURRENT) == PAPI_VER_CURRENT);
