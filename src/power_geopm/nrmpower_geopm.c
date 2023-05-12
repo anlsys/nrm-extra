@@ -21,9 +21,9 @@
 #include <errno.h>
 #include <geopm_pio.h>
 #include <geopm_topo.h>
+#include <limits.h>
 #include <getopt.h>
 #include <hwloc.h>
-#include <limits.h>
 #include <math.h>
 #include <sched.h>
 #include <signal.h>
@@ -60,7 +60,6 @@ char *usage =
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
-#define MAX_powercap_EVENTS 128
 #define MAX_MEASUREMENTS 8
 
 // handler for interrupt?
@@ -82,12 +81,11 @@ int get_cpu_idx(hwloc_topology_t topology, int cpu)
 	return pu->logical_index;
 }
 
-char *get_domain_label(char *string)
-{
+char *get_domain_label(char* string){
 	char *label;
 	do {
 		label = strtok(string, "_");
-	} while (label != NULL);
+	} while ( label != NULL);
 	return label; // should return last token after the last underscore
 }
 
@@ -171,12 +169,10 @@ int main(int argc, char **argv)
 	size_t n_signals;
 	assert(nrm_vector_length(signals, &n_signals) == NRM_SUCCESS);
 
-	int SignalDomainTypes[n_signals],
-	        SignalDomainIndexes[n_signals][128]; // e.g. store ~128 logical
-	                                             // CPU indexes for a
-	                                             // GEOPM_DOMAIN_CPU?
+	int SignalDomainTypes[n_signals];
+	char DomainTokens[MAX_MEASUREMENTS][NAME_MAX];
 
-	int i, j, domain_type;
+	int i, domain_type;
 	char *signal_name, *full_domain_name;
 	for (i = 0; i < n_signals; i++) {
 		void *p;
@@ -185,148 +181,70 @@ int main(int argc, char **argv)
 		domain_type = geopm_pio_signal_domain_type(signal_name);
 		assert(domain_type >= 0); // GEOPM_DOMAIN_INVALID = -1
 		SignalDomainTypes[i] = domain_type;
-		err = geopm_topo_domain_name(domain_type, NAME_MAX,
-		                             full_domain_name);
-		char *domain_token = get_domain_label(full_domain_name);
-		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
-		              full_domain_name);
+
+		err = geopm_topo_domain_name(domain_type, NAME_MAX, full_domain_name);
+		nrm_log_debug("We get signal: %s. Main screen turn on.\n", full_domain_name);
+		DomainTokens[i] = get_domain_label(full_domain_name);
+		nrm_log_debug("We get token: %s. \n", DomainTokens[i]);
 	}
-
-	// assert(PAPI_library_init(PAPI_VER_CURRENT) == PAPI_VER_CURRENT);
-	// nrm_log_debug("PAPI initialized.\n");
-
-	/* Prepare to detect powercap PAPI component */
-	// int component_id, powercap_component_id = -1, num_components;
-	// const PAPI_component_info_t *component_info = NULL;
-
-	/* Detect powercap component by iterating through all components */
-	// num_components = PAPI_num_components();
-	// for (component_id = 0; component_id < num_components; component_id++)
-	// { 	if ((component_info = PAPI_get_component_info(component_id)) ==
-	// 	    NULL) {
-	// 		nrm_log_error(
-	// 		        "PAPI component identification failed: %s\n");
-	// 		exit(EXIT_FAILURE);
-	// 	}
-
-	// 	if (strstr(component_info->name, "powercap")) {
-	// 		powercap_component_id = component_id;
-	// 		nrm_log_debug(
-	// 		        "PAPI found powercap component at component_id
-	// %d\n", 		        powercap_component_id);
-	// assert(!component_info->disabled); 		break;
-	// 	}
-	// }
-
-	int EventSet = PAPI_NULL;
-	assert(component_id != num_components); // Matching component ID not
-	                                        // found
-	assert(component_info->num_cntrs != 0); // Component has no hardware
-	                                        // counters
-	assert(PAPI_create_eventset(&EventSet) == PAPI_OK);
-	nrm_log_debug("PAPI EventSet created\n");
-
-	int papi_retval, num_events = 0;
-	int EventCode = PAPI_NATIVE_MASK;
-	char EventNames[MAX_powercap_EVENTS][PAPI_MAX_STR_LEN]; // For substring
-	                                                        // checking in
-	                                                        // measurement
-	                                                        // loop
-	int DataTypes[MAX_powercap_EVENTS]; // For datatype checking in
-	                                    // measurement loop
-	PAPI_event_info_t EventInfo;
-
-	papi_retval = PAPI_enum_cmp_event(&EventCode, PAPI_ENUM_FIRST,
-	                                  powercap_component_id);
-	while (papi_retval == PAPI_OK) {
-
-		assert(PAPI_event_code_to_name(
-		               EventCode, EventNames[num_events]) == PAPI_OK);
-		nrm_log_debug("code: %d, event: %s\n", EventCode,
-		              EventNames[num_events]);
-		assert(PAPI_get_event_info(EventCode, &EventInfo) == PAPI_OK);
-		DataTypes[num_events] = EventInfo.data_type;
-		assert(PAPI_add_event(EventSet, EventCode) == PAPI_OK);
-
-		num_events++;
-		papi_retval = PAPI_enum_cmp_event(&EventCode, PAPI_ENUM_EVENTS,
-		                                  powercap_component_id);
-	}
-
-	hwloc_topology_t topology;
-	hwloc_obj_t numanode;
-	hwloc_cpuset_t cpus;
 
 	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS],
 	        *nrm_numa_scopes[MAX_MEASUREMENTS],
+			*nrm_gpu_scopes[MAX_MEASUREMENTS],
 	        *custom_scopes[MAX_MEASUREMENTS];
 
-	int n_energy_events = 0, n_scopes = 0, n_numa_scopes = 0,
-	    n_cpu_scopes = 0, n_custom_scopes = 0, cpu_idx, cpu, numa_id;
-	char *event;
-	char *scope_name;
+	int n_energy_events = 0, n_scopes = 0, n_custom_scopes = 0;
+	char *component;
+	char scope_prefix[32], scope_name[32];
 
-	assert(hwloc_topology_init(&topology) == 0);
-	assert(hwloc_topology_load(topology) == 0);
 
 	int added;
 
 	// INSTEAD: create a scope for each measure-able event, with
 	// corresponding indexes
-	for (i = 0; i < num_events; i++) {
-		event = EventNames[i];
+	for (i = 0; i < n_signals; i++) {
+		component = DomainTokens[i];
 
-		// need to create custom scope name first out of available
-		// information, then scope
-		if (is_energy_event(event, DataTypes[i])) {
-			n_energy_events++;
-			numa_id = parse_numa_id(event); // should match
-			                                // NUMANODE's logical ID
-			nrm_log_debug("energy event detected.\n",
-			              n_energy_events);
+		snprintf(scope_prefix, sizeof(scope_prefix), "%s%s", "nrm.extra.geopm.", component);
+		err = nrm_extra_create_name(scope_prefix, &scope_name);
+		nrm_log_debug("Creating new scope: %s\n",
+						scope_name);
 
-			if (is_NUMA_event(event)) {
-				err = nrm_extra_create_name_ssu("nrm.geopm",
-				                                "numa", numa_id,
-				                                &scope_name);
-				nrm_log_debug("Creating new scope: %s\n",
-				              scope_name);
+		scope = nrm_scope_create(scope_name);
+		nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
+						numa_id);
+		nrm_extra_find_scope(client, &scope, &added);
+		// free(scope_name);
+		// nrm_numa_scopes[numa_id] = scope;
+		// n_numa_scopes++;
 
-				scope = nrm_scope_create(scope_name);
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
-				              numa_id);
-				nrm_extra_find_scope(client, &scope, &added);
-				free(scope_name);
-				nrm_numa_scopes[numa_id] = scope;
-				n_numa_scopes++;
-			} else { // need NUMANODE object to parse CPU
-				 // indexes
-				err = nrm_extra_create_name_ssu("nrm.geopm",
-				                                "cpu", numa_id,
-				                                &scope_name);
-				nrm_log_debug("Creating new scope: %s\n",
-				              scope_name);
+		} else { // need NUMANODE object to parse CPU
+				// indexes
+			err = nrm_extra_create_name_ssu("nrm.geopm",
+											"cpu", numa_id,
+											&scope_name);
+			nrm_log_debug("Creating new scope: %s\n",
+							scope_name);
 
-				scope = nrm_scope_create(scope_name);
-				numanode = hwloc_get_obj_by_type(
-				        topology, HWLOC_OBJ_NUMANODE, numa_id);
-				cpus = numanode->cpuset;
-				hwloc_bitmap_foreach_begin(cpu, cpus)
-				        cpu_idx = get_cpu_idx(topology, cpu);
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-				              cpu_idx);
-				hwloc_bitmap_foreach_end();
-				nrm_extra_find_scope(client, &scope, &added);
-				free(scope_name);
-				nrm_cpu_scopes[numa_id] = scope;
-				n_cpu_scopes++;
-			}
-			if (added) {
-				custom_scopes[numa_id] = scope;
-				n_custom_scopes++;
-			}
-			n_scopes++;
+			scope = nrm_scope_create(scope_name);
+			numanode = hwloc_get_obj_by_type(
+					topology, HWLOC_OBJ_NUMANODE, numa_id);
+			cpus = numanode->cpuset;
+			hwloc_bitmap_foreach_begin(cpu, cpus)
+					cpu_idx = get_cpu_idx(topology, cpu);
+			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+							cpu_idx);
+			hwloc_bitmap_foreach_end();
+			nrm_extra_find_scope(client, &scope, &added);
+			free(scope_name);
+			nrm_cpu_scopes[numa_id] = scope;
+			n_cpu_scopes++;
 		}
+		if (added) {
+			custom_scopes[numa_id] = scope;
+			n_custom_scopes++;
+		}
+		n_scopes++;
 	}
 
 	nrm_log_debug("%d candidate energy events detected.\n",
