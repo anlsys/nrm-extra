@@ -21,10 +21,27 @@ AC_TYPE_SIZE_T
 AC_TYPE_INTPTR_T
 
 PKG_CHECK_MODULES([LIBNRM],[libnrm])
-PKG_CHECK_MODULES([PAPI],[papi])
-PKG_CHECK_MODULES([VARIORUM],[variorum])
-PKG_CHECK_MODULES([JANSSON], [jansson])
+PKG_CHECK_MODULES([PAPI], [papi])
 PKG_CHECK_MODULES([HWLOC], [hwloc])
+
+AC_ARG_WITH([variorum],
+	    [AS_HELP_STRING([--with-variorum],
+			    [Use libvariorum @<:@default=no@:>@])],
+	    [with_variorum=$withval], [with_variorum=no])
+AS_IF([test "x$with_variorum" != "xno"],
+      [
+       PKG_CHECK_MODULES([VARIORUM],[variorum])
+       PKG_CHECK_MODULES([JANSSON], [jansson])
+       have_variorum=1
+      ],
+      [
+       have_variorum=0
+      ]
+)
+AM_CONDITIONAL([HAVE_VARIORUM],[$have_variorum])
+AC_DEFINE([HAVE_VARIORUM],[$have_variorum], [variorum support])
+AC_SUBST([HAVE_VARIORUM])
+
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_OPENMP
@@ -60,3 +77,41 @@ AC_CONFIG_FILES([Makefile
 		 ctests/omp/Makefile
 		 ftests/Makefile])
 AC_OUTPUT
+
+# print out what was configured
+cat <<EOF
+-------------------------------------------------------------------------------
+NRM-EXTRA
+
+Version: $PACKAGE_VERSION
+
+FEATURES:
+---------
+
+LIBNRM:
+=======
+
+CFLAGS:  $LIBNRM_CFLAGS
+LDFLAGS: $LIBNRM_LIBS
+
+HWLOC:
+=======
+
+CFLAGS:  $HWLOC_CFLAGS
+LDFLAGS: $HWLOC_LIBS
+
+PAPI:
+=======
+
+CFLAGS:  $PAPI_CFLAGS
+LDFLAGS: $PAPI_LIBS
+
+VARIORUM:
+=======
+
+Active:  $have_variorum
+CFLAGS:  $VARIORUM_CFLAGS $JANSSON_CFLAGS
+LDFLAGS: $VARIORUM_LIBS $JANSSON_LIBS
+
+-------------------------------------------------------------------------------
+EOF
