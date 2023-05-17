@@ -96,6 +96,7 @@ int main(int argc, char **argv)
 	size_t MAX_SIGNAL_NAME_LENGTH = 55;
 	nrm_vector_t *signals;
 
+	// a vector of GEOPM signal names; will be pushed into by e.g.: -s DRAM_POWER -s CPU_POWER
 	assert(nrm_vector_create(&signals, MAX_SIGNAL_NAME_LENGTH) ==
 	       NRM_SUCCESS);
 
@@ -159,12 +160,14 @@ int main(int argc, char **argv)
 	assert(nrm_client_add_sensor(client, sensor) == 0);
 
 	int nsignals = geopm_pio_num_signal_name();
-	assert(nsignals > 0); // just check that we can obtain signals. Already
-	                      // using strs
+	assert(nsignals > 0); // just check that we can obtain signals
 
 	// we've stored all signals in vector, we need to store corresponding
-	// domain_type labels and
+	// domain_type labels (ints), domain_name tokens (str) and
 	//	component idxs for those domains
+	// domain_type labels: used for sampling signals
+	// domain_name tokens: used for creating NRM scopes
+	// component idxs: will add to scopes, and used to sampling
 
 	size_t n_signals;
 	assert(nrm_vector_length(signals, &n_signals) == NRM_SUCCESS);
@@ -172,9 +175,11 @@ int main(int argc, char **argv)
 	int SignalDomainTypes[n_signals];
 	char DomainTokens[MAX_MEASUREMENTS][NAME_MAX];
 
+	// this loop will obtain our labels and tokens
 	int i, domain_type;
 	char *signal_name, *full_domain_name;
 	for (i = 0; i < n_signals; i++) {
+		// pull out requested signal, convert to integer label
 		void *p;
 		nrm_vector_get(signals, i, &p);
 		signal_name = *(char *)p;
@@ -182,11 +187,15 @@ int main(int argc, char **argv)
 		assert(domain_type >= 0); // GEOPM_DOMAIN_INVALID = -1
 		SignalDomainTypes[i] = domain_type;
 
+		// convert integer label to full domain name
 		err = geopm_topo_domain_name(domain_type, NAME_MAX, full_domain_name);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n", full_domain_name);
+		// convert full name to last component. e.g.: GEOPM_DOMAIN_CPU -> CPU
 		DomainTokens[i] = get_domain_label(full_domain_name);
 		nrm_log_debug("We get token: %s. \n", DomainTokens[i]);
 	}
+
+	// TODO: loop over domains, get valid subcomponent indexes
 
 	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS],
 	        *nrm_numa_scopes[MAX_MEASUREMENTS],
