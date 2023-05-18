@@ -60,8 +60,6 @@ char *usage =
         "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
         "            -h, --help              Displays this help message\n";
 
-#define MAX_MEASUREMENTS 8
-
 // handler for interrupt?
 void interrupt(int signum)
 {
@@ -172,11 +170,11 @@ int main(int argc, char **argv)
 	size_t n_signals;
 	assert(nrm_vector_length(signals, &n_signals) == NRM_SUCCESS);
 
-	int SignalDomainTypes[n_signals];
-	char DomainTokens[MAX_MEASUREMENTS][NAME_MAX];
+	int DomainTypes[n_signals];
+	char DomainTokens[n_signals][NAME_MAX];
 
 	// this loop will obtain our labels and tokens
-	int i, domain_type;
+	int domain_type;
 	char *signal_name, *full_domain_name;
 	for (i = 0; i < n_signals; i++) {
 		// pull out requested signal, convert to integer label
@@ -185,79 +183,134 @@ int main(int argc, char **argv)
 		signal_name = *(char *)p;
 		domain_type = geopm_pio_signal_domain_type(signal_name);
 		assert(domain_type >= 0); // GEOPM_DOMAIN_INVALID = -1
-		SignalDomainTypes[i] = domain_type;
+		DomainTypes[i] = domain_type;
 
 		// convert integer label to full domain name
 		err = geopm_topo_domain_name(domain_type, NAME_MAX, full_domain_name);
+		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n", full_domain_name);
+
 		// convert full name to last component. e.g.: GEOPM_DOMAIN_CPU -> CPU
 		DomainTokens[i] = get_domain_label(full_domain_name);
 		nrm_log_debug("We get token: %s. \n", DomainTokens[i]);
 	}
 
-	// TODO: loop over domains, get valid subcomponent indexes
+	hwloc_topology_t topology;
+	hwloc_obj_t numanode;
+	hwloc_cpuset_t cpus;
 
-	nrm_scope_t *nrm_cpu_scopes[MAX_MEASUREMENTS],
-	        *nrm_numa_scopes[MAX_MEASUREMENTS],
-			*nrm_gpu_scopes[MAX_MEASUREMENTS],
-	        *custom_scopes[MAX_MEASUREMENTS];
+	assert(hwloc_topology_init(&topology) == 0);
+	assert(hwloc_topology_load(topology) == 0);
 
-	int n_energy_events = 0, n_scopes = 0, n_custom_scopes = 0;
-	char *component;
-	char scope_prefix[32], scope_name[32];
+	nrm_scope_t *nrm_cpu_scopes[n_signals],
+		*nrm_numa_scopes[n_signals],
+		*nrm_gpu_scopes[n_signals],
+		*custom_scopes[n_signals];
 
+	char *suffix, *scope_name;
+	int component_idxs[256], added, n_scopes=0, n_numa_scopes=0, n_cpu_scopes=0,
+	n_custom_scopes=0, n_gpu_scopes=0;
 
-	int added;
-
-	// INSTEAD: create a scope for each measure-able event, with
-	// corresponding indexes
-	for (i = 0; i < n_signals; i++) {
-		component = DomainTokens[i];
-
-		snprintf(scope_prefix, sizeof(scope_prefix), "%s%s", "nrm.extra.geopm.", component);
-		err = nrm_extra_create_name(scope_prefix, &scope_name);
-		nrm_log_debug("Creating new scope: %s\n",
-						scope_name);
-
+	// TODO: loop over domains, get valid subcomponent indexes, create scopes
+	for (i=0; i<n_signals; i++){
+		int num_domains = geopm_topo_num_domain(DomainTypes[i]);
+		assert(num_domains >= 0);
+		suffix = DomainTokens[i];
+		
+		err = nrm_extra_create_name_ssu("nrm.geopm",
+								suffix, 0,
+								&scope_name); // what index should we use?
 		scope = nrm_scope_create(scope_name);
-		nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
-						numa_id);
-		nrm_extra_find_scope(client, &scope, &added);
-		// free(scope_name);
-		// nrm_numa_scopes[numa_id] = scope;
-		// n_numa_scopes++;
 
-		} else { // need NUMANODE object to parse CPU
-				// indexes
-			err = nrm_extra_create_name_ssu("nrm.geopm",
-											"cpu", numa_id,
-											&scope_name);
-			nrm_log_debug("Creating new scope: %s\n",
-							scope_name);
-
-			scope = nrm_scope_create(scope_name);
-			numanode = hwloc_get_obj_by_type(
-					topology, HWLOC_OBJ_NUMANODE, numa_id);
-			cpus = numanode->cpuset;
-			hwloc_bitmap_foreach_begin(cpu, cpus)
-					cpu_idx = get_cpu_idx(topology, cpu);
-			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-							cpu_idx);
-			hwloc_bitmap_foreach_end();
-			nrm_extra_find_scope(client, &scope, &added);
-			free(scope_name);
-			nrm_cpu_scopes[numa_id] = scope;
+		switch (suffix) {
+		case "CPU":
+			for (j=0; j<num_domains; j++){
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, j);
+			}
+			nrm_cpu_scopes[n_cpu_scopes] = scope;
 			n_cpu_scopes++;
+			break;
+		case "GPU":
+			for (j=0; j<num_domains; j++){
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, j);
+			}
+			nrm_gpu_scopes[n_gpu_scopes] = scope;
+			n_gpu_scopes++;
+			break;
+		case "MEMORY":
+			for (j=0; j<num_domains; j++){
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, j);
+			}
+			nrm_numa_scopes[n_numa_scopes] = scope;
+			n_numa_scopes++;
+			break;
+		default:
+			break;
 		}
+		nrm_extra_find_scope(client, &scope, &added);
 		if (added) {
-			custom_scopes[numa_id] = scope;
+			custom_scopes[n_custom_scopes] = scope;
 			n_custom_scopes++;
 		}
 		n_scopes++;
 	}
 
-	nrm_log_debug("%d candidate energy events detected.\n",
-	              n_energy_events);
+	// int n_energy_events = 0, n_scopes = 0, n_custom_scopes = 0;
+	// char *component;
+	// char scope_prefix[32], scope_name[32];
+
+
+	// int added;
+
+	// // INSTEAD: create a scope for each measure-able event, with
+	// // corresponding indexes
+	// for (i = 0; i < n_signals; i++) {
+	// 	component = DomainTokens[i];
+
+	// 	snprintf(scope_prefix, sizeof(scope_prefix), "%s%s", "nrm.extra.geopm.", component);
+	// 	err = nrm_extra_create_name(scope_prefix, &scope_name);
+	// 	nrm_log_debug("Creating new scope: %s\n",
+	// 					scope_name);
+
+	// 	scope = nrm_scope_create(scope_name);
+	// 	nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
+	// 					numa_id);
+	// 	nrm_extra_find_scope(client, &scope, &added);
+	// 	// free(scope_name);
+	// 	// nrm_numa_scopes[numa_id] = scope;
+	// 	// n_numa_scopes++;
+
+	// 	} else { // need NUMANODE object to parse CPU
+	// 			// indexes
+	// 		err = nrm_extra_create_name_ssu("nrm.geopm",
+	// 										"cpu", numa_id,
+	// 										&scope_name);
+	// 		nrm_log_debug("Creating new scope: %s\n",
+	// 						scope_name);
+
+	// 		scope = nrm_scope_create(scope_name);
+	// 		numanode = hwloc_get_obj_by_type(
+	// 				topology, HWLOC_OBJ_NUMANODE, numa_id);
+	// 		cpus = numanode->cpuset;
+	// 		hwloc_bitmap_foreach_begin(cpu, cpus)
+	// 				cpu_idx = get_cpu_idx(topology, cpu);
+	// 		nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+	// 						cpu_idx);
+	// 		hwloc_bitmap_foreach_end();
+	// 		nrm_extra_find_scope(client, &scope, &added);
+	// 		free(scope_name);
+	// 		nrm_cpu_scopes[numa_id] = scope;
+	// 		n_cpu_scopes++;
+	// 	}
+	// 	if (added) {
+	// 		custom_scopes[numa_id] = scope;
+	// 		n_custom_scopes++;
+	// 	}
+	// 	n_scopes++;
+	// }
+
+	// nrm_log_debug("%d candidate energy events detected.\n",
+	//               n_energy_events);
 	nrm_log_debug(
 	        "%d NRM scopes initialized (%d NUMA, %d CPU, %d custom)\n",
 	        n_scopes, n_numa_scopes, n_cpu_scopes, n_custom_scopes);
