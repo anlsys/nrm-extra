@@ -209,7 +209,7 @@ int main(int argc, char **argv)
 
 	char *suffix, *scope_name;
 	int component_idxs[256], added, n_scopes=0, n_numa_scopes=0, n_cpu_scopes=0,
-	n_custom_scopes=0, n_gpu_scopes=0;
+	n_custom_scopes=0, n_gpu_scopes=0, cpu_idx, cpu, numa_id;
 
 	// TODO: loop over domains, get valid subcomponent indexes, create scopes
 	for (i=0; i<n_signals; i++){
@@ -224,9 +224,15 @@ int main(int argc, char **argv)
 
 		switch (suffix) {
 		case "CPU":
-			for (j=0; j<num_domains; j++){
-				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, j);
-			}
+			// lets use hwloc CPU indexes instead
+			numanode = hwloc_get_obj_by_type(
+					topology, HWLOC_OBJ_NUMANODE, numa_id);
+			cpus = numanode->cpuset;
+			hwloc_bitmap_foreach_begin(cpu, cpus)
+					cpu_idx = get_cpu_idx(topology, cpu);
+			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+							cpu_idx);
+			hwloc_bitmap_foreach_end();
 			nrm_cpu_scopes[n_cpu_scopes] = scope;
 			n_cpu_scopes++;
 			break;
@@ -255,73 +261,17 @@ int main(int argc, char **argv)
 		n_scopes++;
 	}
 
-	// int n_energy_events = 0, n_scopes = 0, n_custom_scopes = 0;
-	// char *component;
-	// char scope_prefix[32], scope_name[32];
-
-
-	// int added;
-
-	// // INSTEAD: create a scope for each measure-able event, with
-	// // corresponding indexes
-	// for (i = 0; i < n_signals; i++) {
-	// 	component = DomainTokens[i];
-
-	// 	snprintf(scope_prefix, sizeof(scope_prefix), "%s%s", "nrm.extra.geopm.", component);
-	// 	err = nrm_extra_create_name(scope_prefix, &scope_name);
-	// 	nrm_log_debug("Creating new scope: %s\n",
-	// 					scope_name);
-
-	// 	scope = nrm_scope_create(scope_name);
-	// 	nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA,
-	// 					numa_id);
-	// 	nrm_extra_find_scope(client, &scope, &added);
-	// 	// free(scope_name);
-	// 	// nrm_numa_scopes[numa_id] = scope;
-	// 	// n_numa_scopes++;
-
-	// 	} else { // need NUMANODE object to parse CPU
-	// 			// indexes
-	// 		err = nrm_extra_create_name_ssu("nrm.geopm",
-	// 										"cpu", numa_id,
-	// 										&scope_name);
-	// 		nrm_log_debug("Creating new scope: %s\n",
-	// 						scope_name);
-
-	// 		scope = nrm_scope_create(scope_name);
-	// 		numanode = hwloc_get_obj_by_type(
-	// 				topology, HWLOC_OBJ_NUMANODE, numa_id);
-	// 		cpus = numanode->cpuset;
-	// 		hwloc_bitmap_foreach_begin(cpu, cpus)
-	// 				cpu_idx = get_cpu_idx(topology, cpu);
-	// 		nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-	// 						cpu_idx);
-	// 		hwloc_bitmap_foreach_end();
-	// 		nrm_extra_find_scope(client, &scope, &added);
-	// 		free(scope_name);
-	// 		nrm_cpu_scopes[numa_id] = scope;
-	// 		n_cpu_scopes++;
-	// 	}
-	// 	if (added) {
-	// 		custom_scopes[numa_id] = scope;
-	// 		n_custom_scopes++;
-	// 	}
-	// 	n_scopes++;
-	// }
-
-	// nrm_log_debug("%d candidate energy events detected.\n",
-	//               n_energy_events);
 	nrm_log_debug(
-	        "%d NRM scopes initialized (%d NUMA, %d CPU, %d custom)\n",
-	        n_scopes, n_numa_scopes, n_cpu_scopes, n_custom_scopes);
+	        "%d NRM scopes initialized (%d NUMA, %d CPU, %d GPU, %d custom)\n",
+	        n_scopes, n_numa_scopes, n_cpu_scopes, n_gpu_scopes, n_custom_scopes);
 
 	long long *event_values;
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 	double watts_value, *event_totals;
 
-	event_values = calloc(num_events, sizeof(long long));
-	event_totals = calloc(num_events, sizeof(double)); // converting then
+	event_values = calloc(n_signals, sizeof(double));
+	event_totals = calloc(n_signals, sizeof(double)); // converting then
 	                                                   // storing
 
 	stop = 0;
@@ -331,7 +281,7 @@ int main(int argc, char **argv)
 
 		nrm_time_gettime(&before_time);
 
-		assert(PAPI_start(EventSet) == PAPI_OK);
+		// assert(PAPI_start(EventSet) == PAPI_OK);
 
 		/* sleep for a frequency */
 		struct timespec req, rem;
@@ -347,11 +297,11 @@ int main(int argc, char **argv)
 		nrm_time_gettime(&after_time);
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
-		// Stop and read EventSet measurements into "event_values"...
-		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
+		// // Stop and read EventSet measurements into "event_values"...
+		// assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
 
 		nrm_log_debug("scaled energy measurements:\n");
-		for (i = 0; i < num_events; i++) {
+		for (i = 0; i < n_signals; i++) {
 			event = EventNames[i];
 
 			if (is_energy_event(event, DataTypes[i])) {
@@ -391,7 +341,7 @@ int main(int argc, char **argv)
 	}
 
 	/* final send here */
-	for (i = 0; i < num_events; i++) {
+	for (i = 0; i < n_signals; i++) {
 		event = EventNames[i];
 
 		if (is_energy_event(event, DataTypes[i])) {
