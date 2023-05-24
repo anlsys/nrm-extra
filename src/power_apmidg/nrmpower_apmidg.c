@@ -131,7 +131,7 @@ int main(int argc, char **argv)
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 
-	while(true) {
+	while(1) {
 		/* sleep for a frequency */
 		struct timespec req, rem;
 		req.tv_sec = ceil(sleeptime);
@@ -154,10 +154,10 @@ int main(int argc, char **argv)
 					      energy);
 		}
 	}
-	/* finalize program */
 
-	for (i = 0; i < n_gpus; i++) {
-		if (nrm_gpus_scope_added[i])
+	/* finalize program */
+	for (int i = 0; i < n_gpus; i++) {
+		if (nrm_gpu_scope_added[i])
 			nrm_client_remove_scope(client, nrm_gpu_scopes[i]);
 		nrm_scope_destroy(nrm_gpu_scopes[i]);
 	}
