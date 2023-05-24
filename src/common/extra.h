@@ -24,4 +24,17 @@ int nrm_extra_find_allowed_scope(nrm_client_t *client,
                                  int *added);
 int nrm_extra_find_scope(nrm_client_t *client, nrm_scope_t **scope, int *added);
 
+typedef struct nrm_extra_common_opt_s {
+	char *upstream_uri;
+	int pub_port;
+	int rpc_port;
+	int log_level;
+	double freq;
+	int help;
+} nrm_extra_common_args_t;
+
+
+int nrm_extra_parse_common_args(int *argc, char **argv[],
+				nrm_extra_common_args_t *args);
+
 #endif

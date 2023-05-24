@@ -38,11 +38,7 @@ static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
 static int custom_scope = 0;
 
-static char *upstream_uri = "tcp://127.0.0.1";
-static int pub_port = 2345;
-static int rpc_port = 3456;
-
-static int log_level = NRM_LOG_DEBUG;
+static nrm_extra_common_args_t args;
 
 char *usage =
         "Usage: nrm-perfwrapper [options] [command]\n"
@@ -54,46 +50,34 @@ char *usage =
 
 int main(int argc, char **argv)
 {
-	int c, err;
-	double freq = 1;
+	int err;
 	char EventCodeStr[PAPI_MAX_STR_LEN] = "PAPI_TOT_INS";
 
+	err = nrm_extra_parse_common_args(&argc, &argv, &args);
+	if (!err)
+		fprintf(stderr, "%s", usage);
+		exit(EXIT_FAILURE);
+	if (!args.help) {
+		fprintf(stderr, "%s", usage);
+		exit(EXIT_SUCCESS);
+	}
+
 	while (1) {
+		int c;
 		static struct option long_options[] = {
-		        {"verbose", no_argument, &log_level, 1},
-		        {"frequency", required_argument, 0, 'f'},
-		        {"help", no_argument, 0, 'h'},
 		        {"event", required_argument, 0, 'e'},
 		        {0, 0, 0, 0}};
 
 		int option_index = 0;
-		c = getopt_long(argc, argv, "+vf:e:h", long_options,
+		c = getopt_long(argc, argv, "+e:", long_options,
 		                &option_index);
 
 		if (c == -1)
 			break;
 		switch (c) {
-		case 0:
-			break;
-		case 'v':
-			log_level = NRM_LOG_DEBUG;
-			break;
-		case 'f':
-			errno = 0;
-			freq = strtod(optarg, NULL);
-			if (errno != 0 || freq == 0) {
-				nrm_log_error(
-				        "Error during conversion to double: %d\n",
-				        errno);
-				exit(EXIT_FAILURE);
-			}
-			break;
 		case 'e':
 			strcpy(EventCodeStr, optarg);
 			break;
-		case 'h':
-			fprintf(stderr, "%s", usage);
-			exit(EXIT_SUCCESS);
 		case '?':
 		default:
 			fprintf(stderr, "Wrong option argument\n");
@@ -105,17 +89,17 @@ int main(int argc, char **argv)
 	nrm_init(NULL, NULL);
 	assert(nrm_log_init(stderr, "nrm.extra.perf") == 0);
 
-	nrm_log_setlevel(log_level);
+	nrm_log_setlevel(args.log_level);
 	nrm_log_debug("NRM logging initialized.\n");
 
 	// create client
-	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
+	nrm_client_create(&client, args.upstream_uri, args.pub_port, args.rpc_port);
 
 	nrm_log_debug("NRM client initialized.\n");
 
 	assert(client != NULL);
 
-	nrm_log_debug("verbose=%d; freq=%f; event=%s\n", log_level, freq,
+	nrm_log_debug("verbose=%d; freq=%f; event=%s\n", args.log_level, args.freq,
 	              EventCodeStr);
 
 	if (optind >= argc) {
@@ -203,7 +187,7 @@ int main(int argc, char **argv)
 	do {
 
 		/* sleep for a frequency */
-		double sleeptime = 1 / freq;
+		double sleeptime = 1 / args.freq;
 		struct timespec req, rem;
 		req.tv_sec = ceil(sleeptime);
 		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
