@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>
+#include <libapmidg.h>
 #include <math.h>
 #include <sched.h>
 #include <signal.h>
@@ -28,7 +29,6 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#include <libapmidg.h>
 
 #include <nrm.h>
 
@@ -113,11 +113,11 @@ int main(int argc, char **argv)
 	int n_gpus = 0;
 
 	n_gpus = apmidg_getndevs();
-	for(int i = 0; i < n_gpus; i++) {
+	for (int i = 0; i < n_gpus; i++) {
 		char *scope_name;
 		int added;
 		err = nrm_extra_create_name_ssu("nrm.apmidg", "gpu", i,
-						&scope_name);
+		                                &scope_name);
 		nrm_scope_t *scope = nrm_scope_create(scope_name);
 		nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, i);
 		nrm_extra_find_scope(client, &scope, &added);
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 
-	while(1) {
+	while (1) {
 		/* sleep for a frequency */
 		struct timespec req, rem;
 		req.tv_sec = ceil(sleeptime);
@@ -150,8 +150,7 @@ int main(int argc, char **argv)
 			apmidg_readenergy(i, 0, &energy, &ts);
 			nrm_time_t time = nrm_time_fromns(ts);
 			nrm_client_send_event(client, time, sensor,
-					      nrm_gpu_scopes[i],
-					      energy);
+			                      nrm_gpu_scopes[i], energy);
 		}
 	}
 
