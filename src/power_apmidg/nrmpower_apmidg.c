@@ -144,8 +144,8 @@ int main(int argc, char **argv)
 	double choices[10];
 	for (int i = 0; i < 10; i++) {
 		// values are in milliwatt, cut it in 10
-		double delta = (max - min)/ 10;
-		choices[i] = min + i*delta;
+		double delta = (max - min) / 10;
+		choices[i] = min + i * delta;
 	}
 	nrm_actuator_set_choices(actuator, 10, choices);
 	nrm_actuator_set_value(actuator, dft);
