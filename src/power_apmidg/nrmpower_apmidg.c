@@ -42,6 +42,17 @@ volatile sig_atomic_t stop;
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
+static nrm_actuator_t *actuator;
+
+int apmidg_actuator_callback(nrm_uuid_t *uuid, double value)
+{
+	(void)uuid;
+	int n_gpus = apmidg_getndevs();
+	for (int i = 0; i < n_gpus; i++) {
+		apmidg_setpwrlim(i, 0, value);
+	}
+	return 0;
+}
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -125,6 +136,28 @@ int main(int argc, char **argv)
 		nrm_gpu_scopes[i] = scope;
 		nrm_gpu_scope_added[i] = added;
 	}
+
+	// setup actuator
+	actuator = nrm_actuator_create("nrm.apmidg.global");
+	int dft, min, max;
+	apmidg_getpwrprops(0, 0, 0, 0, 0, &dft, &min, &max);
+	double choices[10];
+	for (int i = 0; i < 10; i++) {
+		// values are in milliwatt, cut it in 10
+		double delta = (max - min)/ 10;
+		choices[i] = min + i*delta;
+	}
+	nrm_actuator_set_choices(actuator, 10, choices);
+	nrm_actuator_set_value(actuator, dft);
+	err = nrm_client_add_actuator(client, actuator);
+	if (err) {
+		nrm_log_error("error during client request\n");
+		return EXIT_FAILURE;
+	}
+
+	nrm_log_info("starting actuate callback\n");
+	nrm_client_set_actuate_listener(client, apmidg_actuator_callback);
+	nrm_client_start_actuate_listener(client);
 
 	double sleeptime = 1 / freq;
 
