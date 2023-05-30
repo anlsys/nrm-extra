@@ -36,8 +36,7 @@
 
 #define MAX_MEASUREMENTS 16
 
-static int log_level = 0;
-volatile sig_atomic_t stop;
+static int log_level = NRM_LOG_DEBUG;
 
 static nrm_client_t *client;
 static nrm_scope_t *scope;
@@ -123,6 +122,7 @@ int main(int argc, char **argv)
 	int nrm_gpu_scope_added[MAX_MEASUREMENTS];
 	int n_gpus = 0;
 
+	apmidg_init(0);
 	n_gpus = apmidg_getndevs();
 	for (int i = 0; i < n_gpus; i++) {
 		char *scope_name;
@@ -196,6 +196,7 @@ int main(int argc, char **argv)
 	nrm_client_remove_sensor(client, sensor);
 	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
+	apmidg_finish();
 	nrm_finalize();
 	exit(EXIT_SUCCESS);
 }
