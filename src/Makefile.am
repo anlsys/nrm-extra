@@ -41,3 +41,11 @@ nrm_power_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @HWLOC_CFLAGS@ @J
 nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
 bin_PROGRAMS += nrm-power-variorum
 endif
+
+if HAVE_APMIDG
+nrm_power_apmidg_SOURCES = power_apmidg/nrmpower_apmidg.c
+nrm_power_apmidg_LDADD = libcommon.la
+nrm_power_apmidg_CFLAGS = $(COMMON_CFLAGS) @APMIDG_CFLAGS@
+nrm_power_apmidg_LDFLAGS = $(COMMON_LDFLAGS) @APMIDG_LIBS@
+bin_PROGRAMS += nrm-power-apmidg
+endif

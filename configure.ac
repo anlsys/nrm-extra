@@ -38,9 +38,27 @@ AS_IF([test "x$with_variorum" != "xno"],
        have_variorum=0
       ]
 )
-AM_CONDITIONAL([HAVE_VARIORUM],[$have_variorum])
+AM_CONDITIONAL([HAVE_VARIORUM],[test "x$have_variorum" = "x1"])
 AC_DEFINE([HAVE_VARIORUM],[$have_variorum], [variorum support])
 AC_SUBST([HAVE_VARIORUM])
+
+AC_ARG_WITH([apmidg],
+	    [AS_HELP_STRING([--with-apmidg],
+			    [Use libapmidg @<:@default=no@:>@])],
+	    [with_apmidg=$withval], [with_apmidg=no])
+AS_IF([test "x$with_apmidg" != "xno"],
+      [
+       AC_CHECK_HEADERS([libapmidg.h],,[AC_MSG_ERROR([nrm-extra requires apmidg])])
+       AC_CHECK_LIB(apmidg, apmidg_init,,[AC_MSG_ERROR([nrm-extra requires apmidg])])
+       have_apmidg=1
+      ],
+      [
+       have_apmidg=0
+      ]
+)
+AM_CONDITIONAL([HAVE_APMIDG],[test "x$have_apmidg" = "x1"])
+AC_DEFINE([HAVE_APMIDG],[$have_apmidg], [apmidg support])
+AC_SUBST([HAVE_APMIDG])
 
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
