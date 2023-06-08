@@ -43,6 +43,23 @@ AM_CONDITIONAL([HAVE_VARIORUM],[$have_variorum])
 AC_DEFINE([HAVE_VARIORUM],[$have_variorum], [variorum support])
 AC_SUBST([HAVE_VARIORUM])
 
+AC_ARG_WITH([geopm],
+	    [AS_HELP_STRING([--with-geopm],
+			    [Use libgeopm @<:@default=no@:>@])],
+	    [with_geopm=$withval], [with_geopm=no])
+AS_IF([test "x$with_geopm != "xno"],
+      [
+       PKG_CHECK_MODULES([GEOPM],[geopm])
+       have_geopm=1
+      ],
+      [
+       have_geopm=0
+      ]
+)
+AM_CONDITIONAL([HAVE_GEOPM],[$have_geopm])
+AC_DEFINE([HAVE_GEOPM],[$have_geopm], [geopm support])
+AC_SUBST([HAVE_GEOPM])
+
 AX_MPI([], [AC_MSG_ERROR(MPI compiler needed but couldn't be found)])
 
 AC_OPENMP
@@ -113,6 +130,13 @@ VARIORUM:
 Active:  $have_variorum
 CFLAGS:  $VARIORUM_CFLAGS $JANSSON_CFLAGS
 LDFLAGS: $VARIORUM_LIBS $JANSSON_LIBS
+
+GEOPM:
+=======
+
+Active:  $have_geopm
+CFLAGS:  $GEOPM_CFLAGS
+LDFLAGS: $GEOPM_LIBS
 
 -------------------------------------------------------------------------------
 EOF
