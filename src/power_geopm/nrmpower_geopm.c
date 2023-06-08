@@ -172,6 +172,7 @@ int main(int argc, char **argv)
 
 	int DomainTypes[n_signals];
 	char DomainTokens[n_signals][NAME_MAX];
+	char SignalNames[n_signals][NAME_MAX]; // only needed for signal reading
 
 	// this loop will obtain our labels and tokens
 	int domain_type;
@@ -181,6 +182,7 @@ int main(int argc, char **argv)
 		void *p;
 		nrm_vector_get(signals, i, &p);
 		signal_name = *(char *)p;
+		SignalNames[i] = signal_name;
 		domain_type = geopm_pio_signal_domain_type(signal_name);
 		assert(domain_type >= 0); // GEOPM_DOMAIN_INVALID = -1
 		DomainTypes[i] = domain_type;
@@ -265,23 +267,20 @@ int main(int argc, char **argv)
 	        "%d NRM scopes initialized (%d NUMA, %d CPU, %d GPU, %d custom)\n",
 	        n_scopes, n_numa_scopes, n_cpu_scopes, n_gpu_scopes, n_custom_scopes);
 
-	long long *event_values;
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
-	double watts_value, *event_totals;
+	double *event_totals;
 
-	event_values = calloc(n_signals, sizeof(double));
 	event_totals = calloc(n_signals, sizeof(double)); // converting then
 	                                                   // storing
-
 	stop = 0;
+	int domain_idx;
+	char *domain_token;
 	double sleeptime = 1 / freq;
 
 	while (true) {
 
 		nrm_time_gettime(&before_time);
-
-		// assert(PAPI_start(EventSet) == PAPI_OK);
 
 		/* sleep for a frequency */
 		struct timespec req, rem;
@@ -297,47 +296,29 @@ int main(int argc, char **argv)
 		nrm_time_gettime(&after_time);
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
-		// // Stop and read EventSet measurements into "event_values"...
-		// assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
+		for (i=0; i<n_signals; i++){
+			signal_name = SignalNames[i];
+			domain_type = DomainTypes[i];
+			domain_token = DomainTokens[i];
 
-		nrm_log_debug("scaled energy measurements:\n");
-		for (i = 0; i < n_signals; i++) {
-			event = EventNames[i];
+			int num_domains = geopm_topo_num_domain(DomainTypes[i]);
 
-			if (is_energy_event(event, DataTypes[i])) {
-				watts_value = get_watts(event_values[i],
-				                        elapsed_time);
-				numa_id = parse_numa_id(event); // should match
-				                                // NUMANODE's
-				                                // logical ID
-
-				event_totals[i] += watts_value;
-
-				if (is_NUMA_event(event)) {
-					scope = nrm_numa_scopes[numa_id];
-				} else {
-					scope = nrm_cpu_scopes[numa_id];
-				}
-				nrm_log_debug(
-				        "%-45s%4i uj (Total Power %f W)\n",
-				        EventNames[i], event_values[i],
-				        event_totals[i]);
-
-				err = nrm_client_send_event(client, after_time,
-				                            sensor, scope,
-				                            event_totals[i]);
+			double total = 0;
+			for (j=0; j<num_domains; j++){ // but will this be accurate for all cores?
+				double value = 0;
+				err = geopm_pio_read_signal(signal_name, domain_type, j, &value);
+				total += value;
 			}
+			event_totals[i] = total;
+			nrm_log_debug("%s:%s - energy measurement: %d\n", domain_token, signal_name, event_totals[i]);
 		}
+		
+
+
 		if (err == -1 || errno == EINTR) {
 			nrm_log_error("Interrupted. Exiting\n");
 			break;
 		}
-	}
-
-	int papi_status;
-	assert(PAPI_state(EventSet, &papi_status) == PAPI_OK);
-	if (papi_status == PAPI_RUNNING) {
-		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
 	}
 
 	/* final send here */
@@ -377,7 +358,6 @@ int main(int argc, char **argv)
 	nrm_client_destroy(&client);
 
 	nrm_finalize();
-	free(event_values);
 	free(event_totals);
 
 	exit(EXIT_SUCCESS);
