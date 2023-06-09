@@ -21,9 +21,9 @@
 #include <errno.h>
 #include <geopm_pio.h>
 #include <geopm_topo.h>
-#include <limits.h>
 #include <getopt.h>
 #include <hwloc.h>
+#include <limits.h>
 #include <math.h>
 #include <sched.h>
 #include <signal.h>
@@ -79,11 +79,12 @@ int get_cpu_idx(hwloc_topology_t topology, int cpu)
 	return pu->logical_index;
 }
 
-char *get_domain_label(char* string){
+char *get_domain_label(char *string)
+{
 	char *label;
 	do {
 		label = strtok(string, "_");
-	} while ( label != NULL);
+	} while (label != NULL);
 	return label; // should return last token after the last underscore
 }
 
@@ -94,7 +95,8 @@ int main(int argc, char **argv)
 	size_t MAX_SIGNAL_NAME_LENGTH = 55;
 	nrm_vector_t *signals;
 
-	// a vector of GEOPM signal names; will be pushed into by e.g.: -s DRAM_POWER -s CPU_POWER
+	// a vector of GEOPM signal names; will be pushed into by e.g.: -s
+	// DRAM_POWER -s CPU_POWER
 	assert(nrm_vector_create(&signals, MAX_SIGNAL_NAME_LENGTH) ==
 	       NRM_SUCCESS);
 
@@ -188,11 +190,14 @@ int main(int argc, char **argv)
 		DomainTypes[i] = domain_type;
 
 		// convert integer label to full domain name
-		err = geopm_topo_domain_name(domain_type, NAME_MAX, full_domain_name);
+		err = geopm_topo_domain_name(domain_type, NAME_MAX,
+		                             full_domain_name);
 		assert(err == 0);
-		nrm_log_debug("We get signal: %s. Main screen turn on.\n", full_domain_name);
+		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
+		              full_domain_name);
 
-		// convert full name to last component. e.g.: GEOPM_DOMAIN_CPU -> CPU
+		// convert full name to last component. e.g.: GEOPM_DOMAIN_CPU
+		// -> CPU
 		DomainTokens[i] = get_domain_label(full_domain_name);
 		nrm_log_debug("We get token: %s. \n", DomainTokens[i]);
 	}
@@ -204,44 +209,43 @@ int main(int argc, char **argv)
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
 
-	nrm_scope_t *nrm_cpu_scopes[n_signals],
-		*nrm_numa_scopes[n_signals],
-		*nrm_gpu_scopes[n_signals],
-		*custom_scopes[n_signals];
-		*scopes[n_signals];
+	nrm_scope_t *nrm_cpu_scopes[n_signals], *nrm_numa_scopes[n_signals],
+	        *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals];
+	*scopes[n_signals];
 
 	char *suffix, *scope_name;
-	int component_idxs[256], added, n_scopes=0, n_numa_scopes=0, n_cpu_scopes=0,
-	n_custom_scopes=0, n_gpu_scopes=0, cpu_idx, cpu, numa_id;
+	int component_idxs[256], added, n_scopes = 0, n_numa_scopes = 0,
+	                                n_cpu_scopes = 0, n_custom_scopes = 0,
+	                                n_gpu_scopes = 0, cpu_idx, cpu, numa_id;
 
-	// TODO: loop over domains, get valid subcomponent indexes, create scopes
-	for (i=0; i<n_signals; i++){
+	// TODO: loop over domains, get valid subcomponent indexes, create
+	// scopes
+	for (i = 0; i < n_signals; i++) {
 		int num_domains = geopm_topo_num_domain(DomainTypes[i]);
 		assert(num_domains >= 0);
 		suffix = DomainTokens[i];
-		
-		err = nrm_extra_create_name_ssu("nrm.geopm",
-								suffix, 0,
-								&scope_name); // what index should we use?
+
+		err = nrm_extra_create_name_ssu("nrm.geopm", suffix, 0,
+		                                &scope_name); // what index
+		                                              // should we use?
 		scope = nrm_scope_create(scope_name);
 
 		switch (suffix) {
 		case "CPU":
 			// lets use hwloc CPU indexes instead
 			numanode = hwloc_get_obj_by_type(
-					topology, HWLOC_OBJ_NUMANODE, numa_id);
+			        topology, HWLOC_OBJ_NUMANODE, numa_id);
 			cpus = numanode->cpuset;
 			hwloc_bitmap_foreach_begin(cpu, cpus)
-					cpu_idx = get_cpu_idx(topology, cpu);
-			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
-							cpu_idx);
+			        cpu_idx = get_cpu_idx(topology, cpu);
+			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, cpu_idx);
 			hwloc_bitmap_foreach_end();
 		case "GPU":
-			for (j=0; j<num_domains; j++){
+			for (j = 0; j < num_domains; j++) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, j);
 			}
 		case "MEMORY":
-			for (j=0; j<num_domains; j++){
+			for (j = 0; j < num_domains; j++) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, j);
 			}
 		default:
@@ -257,14 +261,15 @@ int main(int argc, char **argv)
 
 	nrm_log_debug(
 	        "%d NRM scopes initialized (%d NUMA, %d CPU, %d GPU, %d custom)\n",
-	        n_scopes, n_numa_scopes, n_cpu_scopes, n_gpu_scopes, n_custom_scopes);
+	        n_scopes, n_numa_scopes, n_cpu_scopes, n_gpu_scopes,
+	        n_custom_scopes);
 
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 	double *event_totals;
 
 	event_totals = calloc(n_signals, sizeof(double)); // converting then
-	                                                   // storing
+	                                                  // storing
 	stop = 0;
 	int domain_idx, num_domains;
 	char *domain_token;
@@ -288,7 +293,7 @@ int main(int argc, char **argv)
 		nrm_time_gettime(&after_time);
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
-		for (i=0; i<n_signals; i++){
+		for (i = 0; i < n_signals; i++) {
 			signal_name = SignalNames[i];
 			domain_type = DomainTypes[i];
 			domain_token = DomainTokens[i];
@@ -296,17 +301,22 @@ int main(int argc, char **argv)
 			num_domains = geopm_topo_num_domain(DomainTypes[i]);
 
 			double total = 0;
-			for (j=0; j<num_domains; j++){ // accumulate measurements
+			for (j = 0; j < num_domains; j++) { // accumulate
+				                            // measurements
 				double value = 0;
-				err = geopm_pio_read_signal(signal_name, domain_type, j, &value);
+				err = geopm_pio_read_signal(
+				        signal_name, domain_type, j, &value);
 				total += value;
 			}
 			event_totals[i] = total;
-			nrm_log_debug("%s:%s - energy measurement: %d\n", domain_token, signal_name, event_totals[i]);
+			nrm_log_debug("%s:%s - energy measurement: %d\n",
+			              domain_token, signal_name,
+			              event_totals[i]);
 			// need to get our matching scope
-			nrm_client_send_event(client, after_time, sensor, scopes[i], total);
+			nrm_client_send_event(client, after_time, sensor,
+			                      scopes[i], total);
 		}
-		
+
 		if (err == -1 || errno == EINTR) {
 			nrm_log_error("Interrupted. Exiting\n");
 			break;
@@ -314,20 +324,22 @@ int main(int argc, char **argv)
 	}
 
 	/* final send here */
-	for (i=0; i<n_signals; i++){
+	for (i = 0; i < n_signals; i++) {
 		signal_name = SignalNames[i];
 		domain_type = DomainTypes[i];
 
 		num_domains = geopm_topo_num_domain(DomainTypes[i]);
 
 		double total = 0;
-		for (j=0; j<num_domains; j++){ // accumulate measurements
+		for (j = 0; j < num_domains; j++) { // accumulate measurements
 			double value = 0;
-			err = geopm_pio_read_signal(signal_name, domain_type, j, &value);
+			err = geopm_pio_read_signal(signal_name, domain_type, j,
+			                            &value);
 			total += value;
 		}
 		event_totals[i] = total;
-		nrm_client_send_event(client, after_time, sensor, scopes[i], total);
+		nrm_client_send_event(client, after_time, sensor, scopes[i],
+		                      total);
 	}
 
 	for (i = 0; i < n_custom_scopes; i++) {
