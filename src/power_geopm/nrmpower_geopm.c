@@ -208,6 +208,7 @@ int main(int argc, char **argv)
 		*nrm_numa_scopes[n_signals],
 		*nrm_gpu_scopes[n_signals],
 		*custom_scopes[n_signals];
+		*scopes[n_signals];
 
 	char *suffix, *scope_name;
 	int component_idxs[256], added, n_scopes=0, n_numa_scopes=0, n_cpu_scopes=0,
@@ -235,23 +236,14 @@ int main(int argc, char **argv)
 			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
 							cpu_idx);
 			hwloc_bitmap_foreach_end();
-			nrm_cpu_scopes[n_cpu_scopes] = scope;
-			n_cpu_scopes++;
-			break;
 		case "GPU":
 			for (j=0; j<num_domains; j++){
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, j);
 			}
-			nrm_gpu_scopes[n_gpu_scopes] = scope;
-			n_gpu_scopes++;
-			break;
 		case "MEMORY":
 			for (j=0; j<num_domains; j++){
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, j);
 			}
-			nrm_numa_scopes[n_numa_scopes] = scope;
-			n_numa_scopes++;
-			break;
 		default:
 			break;
 		}
@@ -260,7 +252,7 @@ int main(int argc, char **argv)
 			custom_scopes[n_custom_scopes] = scope;
 			n_custom_scopes++;
 		}
-		n_scopes++;
+		scopes[i] = scope;
 	}
 
 	nrm_log_debug(
@@ -274,7 +266,7 @@ int main(int argc, char **argv)
 	event_totals = calloc(n_signals, sizeof(double)); // converting then
 	                                                   // storing
 	stop = 0;
-	int domain_idx;
+	int domain_idx, num_domains;
 	char *domain_token;
 	double sleeptime = 1 / freq;
 
@@ -301,20 +293,20 @@ int main(int argc, char **argv)
 			domain_type = DomainTypes[i];
 			domain_token = DomainTokens[i];
 
-			int num_domains = geopm_topo_num_domain(DomainTypes[i]);
+			num_domains = geopm_topo_num_domain(DomainTypes[i]);
 
 			double total = 0;
-			for (j=0; j<num_domains; j++){ // but will this be accurate for all cores?
+			for (j=0; j<num_domains; j++){ // accumulate measurements
 				double value = 0;
 				err = geopm_pio_read_signal(signal_name, domain_type, j, &value);
 				total += value;
 			}
 			event_totals[i] = total;
 			nrm_log_debug("%s:%s - energy measurement: %d\n", domain_token, signal_name, event_totals[i]);
+			// need to get our matching scope
+			nrm_client_send_event(client, after_time, sensor, scopes[i], total);
 		}
 		
-
-
 		if (err == -1 || errno == EINTR) {
 			nrm_log_error("Interrupted. Exiting\n");
 			break;
@@ -322,36 +314,29 @@ int main(int argc, char **argv)
 	}
 
 	/* final send here */
-	for (i = 0; i < n_signals; i++) {
-		event = EventNames[i];
+	for (i=0; i<n_signals; i++){
+		signal_name = SignalNames[i];
+		domain_type = DomainTypes[i];
 
-		if (is_energy_event(event, DataTypes[i])) {
-			watts_value = get_watts(event_values[i], elapsed_time);
-			numa_id = parse_numa_id(event); // should match
-			                                // NUMANODE's logical ID
+		num_domains = geopm_topo_num_domain(DomainTypes[i]);
 
-			event_totals[i] += watts_value;
-
-			if (is_NUMA_event(event)) {
-				scope = nrm_numa_scopes[numa_id];
-			} else {
-				scope = nrm_cpu_scopes[numa_id];
-			}
-			nrm_client_send_event(client, after_time, sensor, scope,
-			                      event_totals[i]);
+		double total = 0;
+		for (j=0; j<num_domains; j++){ // accumulate measurements
+			double value = 0;
+			err = geopm_pio_read_signal(signal_name, domain_type, j, &value);
+			total += value;
 		}
+		event_totals[i] = total;
+		nrm_client_send_event(client, after_time, sensor, scopes[i], total);
 	}
 
 	for (i = 0; i < n_custom_scopes; i++) {
 		nrm_client_remove_scope(client, custom_scopes[i]);
 	}
-	for (i = 0; i < n_cpu_scopes; i++) {
-		nrm_scope_destroy(nrm_cpu_scopes[i]);
+	for (i = 0; i < n_signals; i++) {
+		nrm_scope_destroy(scopes[i]);
 	}
 
-	for (i = 0; i < n_numa_scopes; i++) {
-		nrm_scope_destroy(nrm_numa_scopes[i]);
-	}
 	nrm_log_debug("NRM scopes deleted.\n");
 
 	nrm_sensor_destroy(&sensor);
