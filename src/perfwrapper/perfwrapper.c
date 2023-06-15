@@ -33,34 +33,35 @@
 
 #include "extra.h"
 
-static nrm_client_t *client;
-static nrm_scope_t *scope;
-static nrm_sensor_t *sensor;
-static int custom_scope = 0;
-
-static char *upstream_uri = "tcp://127.0.0.1";
-static int pub_port = 2345;
-static int rpc_port = 3456;
-
-static int log_level = NRM_LOG_DEBUG;
-
-char *usage =
-        "Usage: nrm-perfwrapper [options] [command]\n"
-        "     options:\n"
-        "            -e, --event             PAPI preset event name. Default: PAPI_TOT_INS\n"
-        "            -f, --frequency         Frequency in hz to poll. Default: 10.0\n"
-        "            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
-        "            -h, --help              Displays this help message\n";
+#define UPSTREAM_URI "tcp://127.0.0.1"
+#define PUB_PORT 2345
+#define RPC_PORT 3456
 
 int main(int argc, char **argv)
 {
 	int c, err;
 	double freq = 1;
 	char EventCodeStr[PAPI_MAX_STR_LEN] = "PAPI_TOT_INS";
+	int ret = EXIT_FAILURE;
+
+	nrm_client_t *client;
+	nrm_scope_t *scope;
+	nrm_sensor_t *sensor;
+	int custom_scope = 0;
+
+	int log_level = NRM_LOG_QUIET;
+
+	const char *usage =
+		"Usage: nrm-perfwrapper [options] [command]\n"
+		"     options:\n"
+		"            -e, --event             PAPI preset event name. Default: PAPI_TOT_INS\n"
+		"            -f, --frequency         Frequency in hz to poll. Default: 10.0\n"
+		"            -v, --verbose           Produce verbose output. Log messages will be displayed to stderr\n"
+		"            -h, --help              Displays this help message\n";
 
 	while (1) {
 		static struct option long_options[] = {
-		        {"verbose", no_argument, &log_level, 1},
+		        {"verbose", no_argument, 0, 'v'},
 		        {"frequency", required_argument, 0, 'f'},
 		        {"help", no_argument, 0, 'h'},
 		        {"event", required_argument, 0, 'e'},
@@ -81,11 +82,10 @@ int main(int argc, char **argv)
 		case 'f':
 			errno = 0;
 			freq = strtod(optarg, NULL);
-			if (errno != 0 || freq == 0) {
-				nrm_log_error(
-				        "Error during conversion to double: %d\n",
-				        errno);
-				exit(EXIT_FAILURE);
+			if (errno != 0 || freq <= 0) {
+				fprintf(stderr,
+					"Error parsing the frequency\n");
+				goto cleanup_preinit;
 			}
 			break;
 		case 'e':
@@ -93,46 +93,65 @@ int main(int argc, char **argv)
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
-			exit(EXIT_SUCCESS);
+			goto cleanup_preinit;
 		case '?':
 		default:
 			fprintf(stderr, "Wrong option argument\n");
 			fprintf(stderr, "%s", usage);
-			exit(EXIT_FAILURE);
+			goto cleanup_preinit;
 		}
 	}
 
-	nrm_init(NULL, NULL);
-	assert(nrm_log_init(stderr, "nrm.extra.perf") == 0);
+	if (nrm_init(NULL, NULL) != 0) {
+		fprintf(stderr, "nrm_init failed\n");
+		goto cleanup_preinit;
+	}
+	if (nrm_log_init(stderr, "nrm.extra.perf") != 0) {
+		fprintf(stderr, "nrm_log_init failed\n");
+		goto cleanup_postinit;
+	}
 
 	nrm_log_setlevel(log_level);
 	nrm_log_debug("NRM logging initialized.\n");
 
 	// create client
-	nrm_client_create(&client, upstream_uri, pub_port, rpc_port);
+	if (nrm_client_create(&client, UPSTREAM_URI, PUB_PORT, RPC_PORT) != 0 || client == NULL) {
+		nrm_log_error("Client creation failed\n");
+		goto cleanup_postinit;
+	}
 
 	nrm_log_debug("NRM client initialized.\n");
-
-	assert(client != NULL);
 
 	nrm_log_debug("verbose=%d; freq=%f; event=%s\n", log_level, freq,
 	              EventCodeStr);
 
 	if (optind >= argc) {
 		nrm_log_error("Expected command after options.\n");
-		exit(EXIT_FAILURE);
+		goto cleanup_client;
 	}
 
-	nrm_extra_find_allowed_scope(client, "nrm.extra.perf", &scope,
-	                             &custom_scope);
+	if (nrm_extra_find_allowed_scope(client, "nrm.extra.perf", &scope,
+					 &custom_scope) != 0) {
+		nrm_log_error("Finding scope failed\n");
+		goto cleanup_client;
+	}
 	nrm_log_debug("NRM scope initialized.\n");
 
 	/* create our sensor and add it to the daemon */
 	char *sensor_name;
-	assert(nrm_extra_create_name("nrm.extra.perf", &sensor_name) == 0);
-	sensor = nrm_sensor_create(sensor_name);
+	if (nrm_extra_create_name("nrm.extra.perf", &sensor_name) != 0) {
+		nrm_log_error("Name creation failed");
+		goto cleanup_scope;
+	}
+	if ((sensor = nrm_sensor_create(sensor_name)) == NULL) {
+		nrm_log_error("Sensor creation failed");
+		goto cleanup_scope;
+	}
 	free(sensor_name);
-	assert(nrm_client_add_sensor(client, sensor) == 0);
+	if (nrm_client_add_sensor(client, sensor) != 0) {
+		nrm_log_error("Adding sensor failed");
+		goto cleanup_sensor;
+	}
 
 	// initialize PAPI
 	int papi_retval;
@@ -141,7 +160,7 @@ int main(int argc, char **argv)
 	if (papi_retval != PAPI_VER_CURRENT) {
 		nrm_log_error("PAPI library init error: %s\n",
 		              PAPI_strerror(papi_retval));
-		exit(EXIT_FAILURE);
+		goto cleanup;
 	}
 
 	nrm_log_debug("PAPI initialized.\n");
@@ -153,17 +172,20 @@ int main(int argc, char **argv)
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI event_name translation error: %s\n",
 		              PAPI_strerror(err));
+		goto cleanup;
 	}
 	err = PAPI_create_eventset(&EventSet);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI eventset creation error: %s\n",
 		              PAPI_strerror(err));
+		goto cleanup;
 	}
 
 	err = PAPI_add_event(EventSet, EventCode);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI eventset append error: %s\n",
 		              PAPI_strerror(err));
+		goto cleanup;
 	}
 
 	nrm_log_debug(
@@ -171,18 +193,18 @@ int main(int argc, char **argv)
 	        EventCodeStr, EventCode);
 
 	/* launch? command, sample counters */
-	long long counter, total = 0;
+	long long counter;
 
 	int pid = fork();
 	if (pid < 0) {
 		nrm_log_error("perfwrapper fork error\n");
-		exit(EXIT_FAILURE);
+		goto cleanup;
 	} else if (pid == 0) {
 		/* child, needs to exec the cmd */
 		err = execvp(argv[optind], &argv[optind]);
-		nrm_log_error("error executing command: %s\n",
+		nrm_log_error("Error executing command: %s\n",
 		              PAPI_strerror(errno));
-		exit(EXIT_FAILURE);
+		_exit(EXIT_FAILURE);
 	}
 
 	/* us, need to sample counters */
@@ -190,12 +212,14 @@ int main(int argc, char **argv)
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI eventset attach error: %s\n",
 		              PAPI_strerror(err));
+		goto cleanup;
 	}
 	nrm_log_debug("PAPI attached to process with pid %i\n", pid);
 
 	err = PAPI_start(EventSet);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI start error: %s\n", PAPI_strerror(err));
+		goto cleanup;
 	}
 	nrm_log_debug("PAPI started. Initializing event read/send to NRM\n");
 
@@ -203,10 +227,10 @@ int main(int argc, char **argv)
 	do {
 
 		/* sleep for a frequency */
-		double sleeptime = 1 / freq;
+		long long sleeptime = 1e9 / freq;
 		struct timespec req, rem;
-		req.tv_sec = ceil(sleeptime);
-		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
+		req.tv_sec = sleeptime / 1000000000;
+		req.tv_nsec = sleeptime % 1000000000;
 		/* deal with signal interrupts */
 		do {
 			err = nanosleep(&req, &rem);
@@ -218,42 +242,49 @@ int main(int argc, char **argv)
 		if (err != PAPI_OK) {
 			nrm_log_error("PAPI event read error: %s\n",
 			              PAPI_strerror(err));
-			exit(EXIT_FAILURE);
+			goto cleanup;
 		}
 		nrm_log_debug("PAPI counter read.\n");
 
 		nrm_time_gettime(&time);
 		nrm_log_debug("NRM time obtained.\n");
 
-		total += counter;
-		nrm_client_send_event(client, time, sensor, scope, total);
-		nrm_log_debug("NRM accumulated value sent.\n");
+		if (nrm_client_send_event(client, time, sensor, scope, counter) != 0) {
+			nrm_log_error("Sending event to the daemon error\n");
+			goto cleanup;
+		}
+		nrm_log_debug("NRM value sent.\n");
 
 		/* loop until child exits */
 		int status;
 		err = waitpid(pid, &status, WNOHANG);
 		if (err == -1) {
-			nrm_log_error("error during wait: %s\n",
+			nrm_log_error("waitpid error: %s\n",
 			              strerror(errno));
-			exit(EXIT_FAILURE);
+			goto cleanup;
 		}
 	} while (err != pid);
+	ret = EXIT_SUCCESS;
 	nrm_log_debug("Finalizing PAPI-event read/send to NRM.\n");
 
 	/* final send here */
 	PAPI_stop(EventSet, &counter);
-	nrm_client_send_event(client, time, sensor, scope, total);
+	nrm_client_send_event(client, time, sensor, scope, counter);
 
+cleanup:
+cleanup_sensor:
+	nrm_sensor_destroy(&sensor);
+cleanup_scope:
 	/* if we had to add the scope to the daemon, make sure to clean up after
 	 * ourselves
 	 */
 	if (custom_scope)
 		nrm_client_remove_scope(client, scope);
-
-	/* finalize program */
 	nrm_scope_destroy(scope);
-	nrm_sensor_destroy(&sensor);
+cleanup_client:
 	nrm_client_destroy(&client);
+cleanup_postinit:
 	nrm_finalize();
-	exit(EXIT_SUCCESS);
+cleanup_preinit:
+	exit(ret);
 }
