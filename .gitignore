@@ -1,4 +1,5 @@
 Makefile.in
+.dirstamp
 .libs
 Makefile
 ctests/.deps

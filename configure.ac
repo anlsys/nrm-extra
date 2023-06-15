@@ -38,7 +38,7 @@ AS_IF([test "x$with_variorum" != "xno"],
        have_variorum=0
       ]
 )
-AM_CONDITIONAL([HAVE_VARIORUM],[$have_variorum])
+AM_CONDITIONAL([HAVE_VARIORUM],[test "$have_variorum" = "1"])
 AC_DEFINE([HAVE_VARIORUM],[$have_variorum], [variorum support])
 AC_SUBST([HAVE_VARIORUM])
 
