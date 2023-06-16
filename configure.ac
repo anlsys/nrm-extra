@@ -23,7 +23,7 @@ AC_TYPE_INTPTR_T
 PKG_CHECK_MODULES([LIBNRM],[libnrm])
 PKG_CHECK_MODULES([PAPI], [papi])
 PKG_CHECK_MODULES([HWLOC], [hwloc])
-PKG_CHECK_MODULES([GEOPM], [geopm])
+PKG_CHECK_MODULES([GEOPM], [geopm_pio, geopm_topo])
 
 AC_ARG_WITH([variorum],
 	    [AS_HELP_STRING([--with-variorum],
@@ -49,7 +49,7 @@ AC_ARG_WITH([geopm],
 	    [with_geopm=$withval], [with_geopm=no])
 AS_IF([test "x$with_geopm != "xno"],
       [
-       PKG_CHECK_MODULES([GEOPM],[geopm])
+       PKG_CHECK_MODULES([GEOPM], [geopm_pio, geopm_topo])
        have_geopm=1
       ],
       [
