@@ -15,16 +15,18 @@
  */
 
 #define _GNU_SOURCE
-#include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
 #include <papi.h>
+#include <semaphore.h>
 #include <sched.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -36,20 +38,26 @@
 #define UPSTREAM_URI "tcp://127.0.0.1"
 #define PUB_PORT 2345
 #define RPC_PORT 3456
+#define SHM_NAME "/perfwrapper"
 
 int main(int argc, char **argv)
 {
 	int c, err;
 	double freq = 1;
-	char EventCodeStr[PAPI_MAX_STR_LEN] = "PAPI_TOT_INS";
+	char (*EventCodeStrs)[PAPI_MAX_STR_LEN] = NULL;
+	int EventCodeCnt = 0;
 	int ret = EXIT_FAILURE;
 
 	nrm_client_t *client;
 	nrm_scope_t *scope;
-	nrm_sensor_t *sensor;
+	nrm_sensor_t **sensors = NULL;
 	int custom_scope = 0;
+	long long *counters = NULL;
 
-	int log_level = NRM_LOG_QUIET;
+	int log_level = NRM_LOG_ERROR;
+
+	int shm_fd = -1;
+	sem_t *sem = NULL;
 
 	const char *usage =
 		"Usage: nrm-perfwrapper [options] [command]\n"
@@ -89,7 +97,11 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'e':
-			strcpy(EventCodeStr, optarg);
+			if ((EventCodeStrs = realloc(EventCodeStrs, (EventCodeCnt + 1) * sizeof(*EventCodeStrs))) == NULL) {
+				fprintf(stderr, "realloc failed\n");
+				goto cleanup_preinit;
+			}
+			strcpy(EventCodeStrs[EventCodeCnt++], optarg);
 			break;
 		case 'h':
 			fprintf(stderr, "%s", usage);
@@ -100,6 +112,15 @@ int main(int argc, char **argv)
 			fprintf(stderr, "%s", usage);
 			goto cleanup_preinit;
 		}
+	}
+
+	if (EventCodeCnt == 0) {
+		EventCodeCnt = 1;
+		if ((EventCodeStrs = malloc(sizeof(*EventCodeStrs))) == NULL) {
+			fprintf(stderr, "malloc failed\n");
+			goto cleanup_preinit;
+		}
+		strcpy(EventCodeStrs[0], "PAPI_TOT_INS");
 	}
 
 	if (nrm_init(NULL, NULL) != 0) {
@@ -122,8 +143,10 @@ int main(int argc, char **argv)
 
 	nrm_log_debug("NRM client initialized.\n");
 
-	nrm_log_debug("verbose=%d; freq=%f; event=%s\n", log_level, freq,
-	              EventCodeStr);
+	nrm_log_debug("verbose=%d; freq=%f\n", log_level, freq);
+	nrm_log_debug("Events:\n");
+	for (int i = 0; i < EventCodeCnt; i++)
+	    nrm_log_debug("[%d]=%s\n", i, EventCodeStrs[i]);
 
 	if (optind >= argc) {
 		nrm_log_error("Expected command after options.\n");
@@ -137,20 +160,29 @@ int main(int argc, char **argv)
 	}
 	nrm_log_debug("NRM scope initialized.\n");
 
-	/* create our sensor and add it to the daemon */
-	char *sensor_name;
-	if (nrm_extra_create_name("nrm.extra.perf", &sensor_name) != 0) {
-		nrm_log_error("Name creation failed");
-		goto cleanup_scope;
+	/* create our sensors and add them to the daemon */
+	if ((sensors = calloc(EventCodeCnt, sizeof(*sensors))) == NULL) {
+		nrm_log_error("Allocating sensors failed\n");
+		goto cleanup_client;
 	}
-	if ((sensor = nrm_sensor_create(sensor_name)) == NULL) {
-		nrm_log_error("Sensor creation failed");
-		goto cleanup_scope;
-	}
-	free(sensor_name);
-	if (nrm_client_add_sensor(client, sensor) != 0) {
-		nrm_log_error("Adding sensor failed");
-		goto cleanup_sensor;
+	for (int i = 0; i < EventCodeCnt; i++) {
+		char pattern[PAPI_MAX_STR_LEN + 20];
+		char *sensor_name;
+		sprintf(pattern, "nrm.extra.perf.%s", EventCodeStrs[i]);
+		if (nrm_extra_create_name(pattern, &sensor_name) != 0) {
+			nrm_log_error("Name creation failed");
+			goto cleanup_sensor;
+		}
+		if ((sensors[i] = nrm_sensor_create(sensor_name)) == NULL) {
+			nrm_log_error("Sensor creation failed");
+			free(sensor_name);
+			goto cleanup_sensor;
+		}
+		free(sensor_name);
+		if (nrm_client_add_sensor(client, sensors[i]) != 0) {
+			nrm_log_error("Adding sensor failed");
+			goto cleanup_sensor;
+		}
 	}
 
 	// initialize PAPI
@@ -160,40 +192,60 @@ int main(int argc, char **argv)
 	if (papi_retval != PAPI_VER_CURRENT) {
 		nrm_log_error("PAPI library init error: %s\n",
 		              PAPI_strerror(papi_retval));
-		goto cleanup;
+		goto cleanup_shm;
 	}
 
 	nrm_log_debug("PAPI initialized.\n");
 
-	/* setup PAPI interface */
-	int EventCode, EventSet = PAPI_NULL;
+	/* set up PAPI interface */
+	int EventSet = PAPI_NULL;
 
-	err = PAPI_event_name_to_code(EventCodeStr, &EventCode);
-	if (err != PAPI_OK) {
-		nrm_log_error("PAPI event_name translation error: %s\n",
-		              PAPI_strerror(err));
-		goto cleanup;
-	}
 	err = PAPI_create_eventset(&EventSet);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI eventset creation error: %s\n",
 		              PAPI_strerror(err));
-		goto cleanup;
+		goto cleanup_shm;
+	}
+	for (int i = 0; i < EventCodeCnt; i++) {
+		int EventCode;
+		err = PAPI_event_name_to_code(EventCodeStrs[i], &EventCode);
+		if (err != PAPI_OK) {
+			nrm_log_error("PAPI event_name translation error: %s\n",
+				      PAPI_strerror(err));
+			goto cleanup_shm;
+		}
+		err = PAPI_add_event(EventSet, EventCode);
+		if (err != PAPI_OK) {
+			nrm_log_error("PAPI eventset append error: %s\n",
+				      PAPI_strerror(err));
+			goto cleanup_shm;
+		}
+
+		nrm_log_debug(
+			      "PAPI code string %s converted to PAPI code %i, and registered.\n",
+			      EventCodeStrs[i], EventCode);
 	}
 
-	err = PAPI_add_event(EventSet, EventCode);
-	if (err != PAPI_OK) {
-		nrm_log_error("PAPI eventset append error: %s\n",
-		              PAPI_strerror(err));
-		goto cleanup;
+	if ((shm_fd = shm_open(SHM_NAME, O_CREAT | O_EXCL | O_RDWR, 0600)) == -1) {
+		nrm_log_error("shm_open failed\n");
+		goto cleanup_shm;
 	}
-
-	nrm_log_debug(
-	        "PAPI code string %s converted to PAPI code %i, and registered.\n",
-	        EventCodeStr, EventCode);
-
-	/* launch? command, sample counters */
-	long long counter;
+	if (ftruncate(shm_fd, sizeof(*sem)) == -1) {
+		nrm_log_error("ftruncate shared memory failed\n");
+		goto cleanup_shm;
+	}
+	if ((sem = mmap(NULL, sizeof(*sem), PROT_READ | PROT_WRITE, MAP_SHARED,
+			shm_fd, 0)) == MAP_FAILED) {
+		nrm_log_error("mmap shared memory failed\n");
+		goto cleanup_shm;
+	}
+	close(shm_fd);
+	shm_fd = -1;
+	shm_unlink(SHM_NAME);
+	if (sem_init(sem, 1, 0) == -1) {
+		nrm_log_error("sem_init failed\n");
+		goto cleanup_shm;
+	}
 
 	int pid = fork();
 	if (pid < 0) {
@@ -201,9 +253,14 @@ int main(int argc, char **argv)
 		goto cleanup;
 	} else if (pid == 0) {
 		/* child, needs to exec the cmd */
+		/* wait for the parent to attach PAPI counters */
+		if (sem_wait(sem) == -1) {
+			nrm_log_error("sem_wait failed\n");
+			_exit(EXIT_FAILURE);
+		}
 		err = execvp(argv[optind], &argv[optind]);
 		nrm_log_error("Error executing command: %s\n",
-		              PAPI_strerror(errno));
+		              strerror(errno));
 		_exit(EXIT_FAILURE);
 	}
 
@@ -222,10 +279,17 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 	nrm_log_debug("PAPI started. Initializing event read/send to NRM\n");
+	if (sem_post(sem) == -1) {
+		nrm_log_error("sem_post failed\n");
+		goto cleanup;
+	}
 
 	nrm_time_t time;
+	if ((counters = malloc(EventCodeCnt * sizeof(*counters))) == NULL) {
+		nrm_log_error("Allocating counters failed\n");
+		goto cleanup;
+	}
 	do {
-
 		/* sleep for a frequency */
 		long long sleeptime = 1e9 / freq;
 		struct timespec req, rem;
@@ -238,22 +302,24 @@ int main(int argc, char **argv)
 		} while (err == -1 && errno == EINTR);
 
 		/* sample and report */
-		err = PAPI_read(EventSet, &counter);
+		err = PAPI_read(EventSet, counters);
 		if (err != PAPI_OK) {
 			nrm_log_error("PAPI event read error: %s\n",
 			              PAPI_strerror(err));
 			goto cleanup;
 		}
-		nrm_log_debug("PAPI counter read.\n");
+		nrm_log_debug("PAPI counters read.\n");
 
 		nrm_time_gettime(&time);
 		nrm_log_debug("NRM time obtained.\n");
 
-		if (nrm_client_send_event(client, time, sensor, scope, counter) != 0) {
-			nrm_log_error("Sending event to the daemon error\n");
-			goto cleanup;
+		for (int i = 0; i < EventCodeCnt; i++) {
+			if (nrm_client_send_event(client, time, sensors[i], scope, counters[i]) != 0) {
+				nrm_log_error("Sending event to the daemon error\n");
+				goto cleanup;
+			}
 		}
-		nrm_log_debug("NRM value sent.\n");
+		nrm_log_debug("NRM values sent.\n");
 
 		/* loop until child exits */
 		int status;
@@ -268,12 +334,26 @@ int main(int argc, char **argv)
 	nrm_log_debug("Finalizing PAPI-event read/send to NRM.\n");
 
 	/* final send here */
-	PAPI_stop(EventSet, &counter);
-	nrm_client_send_event(client, time, sensor, scope, counter);
+	PAPI_stop(EventSet, counters);
+	nrm_time_gettime(&time);
+	for (int i = 0; i < EventCodeCnt; i++)
+		nrm_client_send_event(client, time, sensors[i], scope, counters[i]);
 
 cleanup:
+	sem_destroy(sem);
+cleanup_shm:
+	if (sem != NULL && sem != MAP_FAILED)
+		munmap(sem, sizeof(*sem));
+	if (shm_fd != -1) {
+		close(shm_fd);
+		shm_unlink(SHM_NAME);
+	}
+	free(counters);
 cleanup_sensor:
-	nrm_sensor_destroy(&sensor);
+	for (int i = 0; i < EventCodeCnt; i++)
+		if (sensors[i])
+			nrm_sensor_destroy(&sensors[i]);
+	free(sensors);
 cleanup_scope:
 	/* if we had to add the scope to the daemon, make sure to clean up after
 	 * ourselves
@@ -286,5 +366,6 @@ cleanup_client:
 cleanup_postinit:
 	nrm_finalize();
 cleanup_preinit:
+	free(EventCodeStrs);
 	exit(ret);
 }
