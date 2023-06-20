@@ -15,5 +15,7 @@ mkShell.override { stdenv = pkgs.stdenv; } {
   ];
   VARIORUM_CFLAGS = "-I${variorum}/include";
   VARIORUM_LIBS = "-L${variorum}/lib -lvariorum";
+  GEOPM_CFLAGS = "-I${geopmd}/include";
+  GEOPM_LIBS = "-L${geopmd}/lib -lgeopmd";
   CFLAGS = "-Wall -Wextra";
 }
