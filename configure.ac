@@ -23,7 +23,7 @@ AC_TYPE_INTPTR_T
 PKG_CHECK_MODULES([LIBNRM],[libnrm])
 PKG_CHECK_MODULES([PAPI], [papi])
 PKG_CHECK_MODULES([HWLOC], [hwloc])
-PKG_CHECK_MODULES([GEOPM], [geopm_pio, geopm_topo])
+PKG_CHECK_MODULES([GEOPM], [geopm])
 
 AC_ARG_WITH([variorum],
 	    [AS_HELP_STRING([--with-variorum],
@@ -45,11 +45,13 @@ AC_SUBST([HAVE_VARIORUM])
 
 AC_ARG_WITH([geopm],
 	    [AS_HELP_STRING([--with-geopm],
-			    [Use libgeopm @<:@default=no@:>@])],
+			    [Use geopm @<:@default=no@:>@])],
 	    [with_geopm=$withval], [with_geopm=no])
 AS_IF([test "x$with_geopm != "xno"],
       [
-       PKG_CHECK_MODULES([GEOPM], [geopm_pio, geopm_topo])
+       AC_SEARCH_LIBS([geopm_pio_num_signal_name], [geopm_pio geopm_topo], [], [
+            AC_MSG_ERROR([unable to find GEOPM])
+       ])
        have_geopm=1
       ],
       [
