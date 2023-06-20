@@ -23,7 +23,6 @@ AC_TYPE_INTPTR_T
 PKG_CHECK_MODULES([LIBNRM],[libnrm])
 PKG_CHECK_MODULES([PAPI], [papi])
 PKG_CHECK_MODULES([HWLOC], [hwloc])
-PKG_CHECK_MODULES([GEOPM], [geopm])
 
 AC_ARG_WITH([variorum],
 	    [AS_HELP_STRING([--with-variorum],
@@ -47,18 +46,18 @@ AC_ARG_WITH([geopm],
 	    [AS_HELP_STRING([--with-geopm],
 			    [Use geopm @<:@default=no@:>@])],
 	    [with_geopm=$withval], [with_geopm=no])
-AS_IF([test "x$with_geopm != "xno"],
+AS_IF([test "x$with_geopm" != "xno"],
       [
-       AC_SEARCH_LIBS([geopm_pio_num_signal_name], [geopm_pio geopm_topo], [], [
-            AC_MSG_ERROR([unable to find GEOPM])
-       ])
+       AC_SEARCH_LIBS([geopm_pio_num_signal_name], [geopm], [], [AC_MSG_ERROR([unable to find GEOPM])])
+       AC_CHECK_HEADERS([geopm_pio.h],,[AC_MSG_ERROR([unable to find geopm_pio.h])])
+       AC_CHECK_HEADERS([geopm_topo.h],,[AC_MSG_ERROR([unable to find geopm_topo.h])])
        have_geopm=1
       ],
       [
        have_geopm=0
       ]
 )
-AM_CONDITIONAL([HAVE_GEOPM],[$have_geopm])
+AM_CONDITIONAL([HAVE_GEOPM],[test "$have_geopm" = "1"])
 AC_DEFINE([HAVE_GEOPM],[$have_geopm], [geopm support])
 AC_SUBST([HAVE_GEOPM])
 
