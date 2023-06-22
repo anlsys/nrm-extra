@@ -15,7 +15,7 @@
  */
 
 #include <stddef.h>
-#include <sys/syslimits.h>
+#include <limits.h>
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
 	// domain_name tokens: used for creating NRM scopes
 	// component idxs: will add to scopes, and used to sampling
 
-	size_t n_signals;
+	size_t n_signals = 1;
 	assert(nrm_vector_length(signals, &n_signals) == NRM_SUCCESS);
 
 	int DomainTypes[n_signals];
@@ -183,8 +183,9 @@ int main(int argc, char **argv)
 		// pull out requested signal, convert to integer label
 		void *p;
 		nrm_vector_get(signals, i, &p);
-		signal_name = *(char *)p;
-		SignalNames[i] = signal_name;
+		signal_name = *(char*)p;
+		// SignalNames[i] = signal_name;
+		strcpy(SignalNames[i], signal_name);
 		domain_type = geopm_pio_signal_domain_type(signal_name);
 		assert(domain_type >= 0); // GEOPM_DOMAIN_INVALID = -1
 		DomainTypes[i] = domain_type;
@@ -198,7 +199,8 @@ int main(int argc, char **argv)
 
 		// convert full name to last component. e.g.: GEOPM_DOMAIN_CPU
 		// -> CPU
-		DomainTokens[i] = get_domain_label(full_domain_name);
+		// DomainTokens[i] = get_domain_label(full_domain_name);
+		strcpy(DomainTokens[i], get_domain_label(full_domain_name));
 		nrm_log_debug("We get token: %s. \n", DomainTokens[i]);
 	}
 
@@ -210,8 +212,7 @@ int main(int argc, char **argv)
 	assert(hwloc_topology_load(topology) == 0);
 
 	nrm_scope_t *nrm_cpu_scopes[n_signals], *nrm_numa_scopes[n_signals],
-	        *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals];
-	*scopes[n_signals];
+	        *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals], *scopes[n_signals];
 
 	char *suffix, *scope_name;
 	int component_idxs[256], added, n_scopes = 0, n_numa_scopes = 0,
@@ -230,8 +231,7 @@ int main(int argc, char **argv)
 		                                              // should we use?
 		scope = nrm_scope_create(scope_name);
 
-		switch (suffix) {
-		case "CPU":
+		if (strcmp(suffix, "CPU")) {
 			// lets use hwloc CPU indexes instead
 			numanode = hwloc_get_obj_by_type(
 			        topology, HWLOC_OBJ_NUMANODE, numa_id);
@@ -240,16 +240,14 @@ int main(int argc, char **argv)
 			        cpu_idx = get_cpu_idx(topology, cpu);
 			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, cpu_idx);
 			hwloc_bitmap_foreach_end();
-		case "GPU":
+		} else if (strcmp(suffix, "GPU")) {
 			for (j = 0; j < num_domains; j++) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, j);
 			}
-		case "MEMORY":
+		} else if (strcmp(suffix, "MEMORY")) {
 			for (j = 0; j < num_domains; j++) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, j);
 			}
-		default:
-			break;
 		}
 		nrm_extra_find_scope(client, &scope, &added);
 		if (added) {
