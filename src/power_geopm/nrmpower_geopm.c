@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 		// pull out requested signal, convert to integer label
 		void *p;
 		nrm_vector_get(signals, i, &p);
-		signal_name = *(char*)p;
+		signal_name = (char*)p;
 		// SignalNames[i] = signal_name;
 		strcpy(SignalNames[i], signal_name);
 		domain_type = geopm_pio_signal_domain_type(signal_name);
