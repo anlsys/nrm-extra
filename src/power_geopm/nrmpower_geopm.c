@@ -88,6 +88,14 @@ char *get_domain_label(char *string)
 	return label; // should return last token after the last underscore
 }
 
+struct signal_info_s {
+	char *signal_name;
+	char *signal_token;
+	int domain_type;
+};
+
+typedef struct signal_info_s signal_info_t;
+
 int main(int argc, char **argv)
 {
 	int j, char_opt, err;
@@ -129,8 +137,7 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			nrm_log_debug("Parsed signal %s\n", optarg);
-			nrm_string_t nrm_optarg = nrm_string_from_char(optarg);
-			nrm_vector_push_back(signals, &nrm_optarg);
+			nrm_vector_push_back(signals, optarg);
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
