@@ -90,10 +90,10 @@ char *get_domain_label(char *string)
 
 int main(int argc, char **argv)
 {
-	int i, j, char_opt, err;
+	int j, char_opt, err;
 	double freq = 1;
-	size_t MAX_SIGNAL_NAME_LENGTH = 55;
-	nrm_vector_t *signals;
+	size_t i, MAX_SIGNAL_NAME_LENGTH = 55;
+	nrm_vector_t *signals = NULL;
 
 	// a vector of GEOPM signal names; will be pushed into by e.g.: -s
 	// DRAM_POWER -s CPU_POWER
@@ -129,7 +129,8 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			nrm_log_debug("Parsed signal %s\n", optarg);
-			nrm_vector_push_back(signals, &optarg);
+			nrm_string_t nrm_optarg = nrm_string_from_char(optarg);
+			nrm_vector_push_back(signals, &nrm_optarg);
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
@@ -178,7 +179,7 @@ int main(int argc, char **argv)
 
 	// this loop will obtain our labels and tokens
 	int domain_type;
-	char *signal_name, *full_domain_name;
+	char *signal_name, *full_domain_name=NULL;
 	for (i = 0; i < n_signals; i++) {
 		// pull out requested signal, convert to integer label
 		void *p;
@@ -211,16 +212,17 @@ int main(int argc, char **argv)
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
 
-	nrm_scope_t *nrm_cpu_scopes[n_signals], *nrm_numa_scopes[n_signals],
-	        *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals], *scopes[n_signals];
+	// nrm_scope_t *nrm_cpu_scopes[n_signals], *nrm_numa_scopes[n_signals],
+	//         *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals], *scopes[n_signals];
+
+	nrm_scope_t *custom_scopes[n_signals], *scopes[n_signals];
 
 	char *suffix, *scope_name;
 	int component_idxs[256], added, n_scopes = 0, n_numa_scopes = 0,
 	                                n_cpu_scopes = 0, n_custom_scopes = 0,
-	                                n_gpu_scopes = 0, cpu_idx, cpu, numa_id;
+	                                n_gpu_scopes = 0, cpu_idx, cpu, numa_id=0;
+	// TODO: determine numa_id from hwloc
 
-	// TODO: loop over domains, get valid subcomponent indexes, create
-	// scopes
 	for (i = 0; i < n_signals; i++) {
 		int num_domains = geopm_topo_num_domain(DomainTypes[i]);
 		assert(num_domains >= 0);
@@ -269,7 +271,7 @@ int main(int argc, char **argv)
 	event_totals = calloc(n_signals, sizeof(double)); // converting then
 	                                                  // storing
 	stop = 0;
-	int domain_idx, num_domains;
+	int num_domains;
 	char *domain_token;
 	double sleeptime = 1 / freq;
 
@@ -340,11 +342,11 @@ int main(int argc, char **argv)
 		                      total);
 	}
 
-	for (i = 0; i < n_custom_scopes; i++) {
-		nrm_client_remove_scope(client, custom_scopes[i]);
+	for (j = 0; j < n_custom_scopes; j++) {
+		nrm_client_remove_scope(client, custom_scopes[j]);
 	}
-	for (i = 0; i < n_signals; i++) {
-		nrm_scope_destroy(scopes[i]);
+	for (j = 0; j < n_signals; j++) {
+		nrm_scope_destroy(scopes[j]);
 	}
 
 	nrm_log_debug("NRM scopes deleted.\n");
