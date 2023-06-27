@@ -252,7 +252,7 @@ int main(int argc, char **argv)
 			nrm_log_error("waitpid error: %s\n",
 				      strerror(errno));
 			goto cleanup;
-                }
+		}
 
 		if (WIFSTOPPED(status) == 0)
 		{
