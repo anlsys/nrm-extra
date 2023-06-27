@@ -16,17 +16,16 @@
 
 #define _GNU_SOURCE
 #include <errno.h>
-#include <fcntl.h>
 #include <getopt.h>
 #include <math.h>
 #include <papi.h>
-#include <semaphore.h>
 #include <sched.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -38,7 +37,6 @@
 #define UPSTREAM_URI "tcp://127.0.0.1"
 #define PUB_PORT 2345
 #define RPC_PORT 3456
-#define SHM_NAME "/perfwrapper"
 
 int main(int argc, char **argv)
 {
@@ -55,9 +53,6 @@ int main(int argc, char **argv)
 	long long *counters = NULL;
 
 	int log_level = NRM_LOG_ERROR;
-
-	int shm_fd = -1;
-	sem_t *sem = NULL;
 
 	const char *usage =
 		"Usage: nrm-perfwrapper [options] [command]\n"
@@ -163,24 +158,24 @@ int main(int argc, char **argv)
 	/* create our sensors and add them to the daemon */
 	if ((sensors = calloc(EventCodeCnt, sizeof(*sensors))) == NULL) {
 		nrm_log_error("Allocating sensors failed\n");
-		goto cleanup_client;
+		goto cleanup_scope;
 	}
 	for (int i = 0; i < EventCodeCnt; i++) {
 		char pattern[PAPI_MAX_STR_LEN + 20];
 		char *sensor_name;
 		sprintf(pattern, "nrm.extra.perf.%s", EventCodeStrs[i]);
 		if (nrm_extra_create_name(pattern, &sensor_name) != 0) {
-			nrm_log_error("Name creation failed");
+			nrm_log_error("Name creation failed\n");
 			goto cleanup_sensor;
 		}
 		if ((sensors[i] = nrm_sensor_create(sensor_name)) == NULL) {
-			nrm_log_error("Sensor creation failed");
+			nrm_log_error("Sensor creation failed\n");
 			free(sensor_name);
 			goto cleanup_sensor;
 		}
 		free(sensor_name);
 		if (nrm_client_add_sensor(client, sensors[i]) != 0) {
-			nrm_log_error("Adding sensor failed");
+			nrm_log_error("Adding sensor failed\n");
 			goto cleanup_sensor;
 		}
 	}
@@ -191,10 +186,15 @@ int main(int argc, char **argv)
 
 	if (papi_retval != PAPI_VER_CURRENT) {
 		nrm_log_error("PAPI library init error: %s\n",
-		              PAPI_strerror(papi_retval));
-		goto cleanup_shm;
+			      PAPI_strerror(papi_retval));
+		goto cleanup;
 	}
 
+	const PAPI_component_info_t *cmpinfo;
+	if ((cmpinfo = PAPI_get_component_info(0)) == NULL) {
+		nrm_log_error("PAPI_get_component_info failed\n");
+		goto cleanup;
+	}
 	nrm_log_debug("PAPI initialized.\n");
 
 	/* set up PAPI interface */
@@ -203,8 +203,8 @@ int main(int argc, char **argv)
 	err = PAPI_create_eventset(&EventSet);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI eventset creation error: %s\n",
-		              PAPI_strerror(err));
-		goto cleanup_shm;
+			      PAPI_strerror(err));
+		goto cleanup;
 	}
 	for (int i = 0; i < EventCodeCnt; i++) {
 		int EventCode;
@@ -212,39 +212,18 @@ int main(int argc, char **argv)
 		if (err != PAPI_OK) {
 			nrm_log_error("PAPI event_name translation error: %s\n",
 				      PAPI_strerror(err));
-			goto cleanup_shm;
+			goto cleanup;
 		}
 		err = PAPI_add_event(EventSet, EventCode);
 		if (err != PAPI_OK) {
 			nrm_log_error("PAPI eventset append error: %s\n",
 				      PAPI_strerror(err));
-			goto cleanup_shm;
+			goto cleanup;
 		}
 
 		nrm_log_debug(
 			      "PAPI code string %s converted to PAPI code %i, and registered.\n",
 			      EventCodeStrs[i], EventCode);
-	}
-
-	if ((shm_fd = shm_open(SHM_NAME, O_CREAT | O_EXCL | O_RDWR, 0600)) == -1) {
-		nrm_log_error("shm_open failed\n");
-		goto cleanup_shm;
-	}
-	if (ftruncate(shm_fd, sizeof(*sem)) == -1) {
-		nrm_log_error("ftruncate shared memory failed\n");
-		goto cleanup_shm;
-	}
-	if ((sem = mmap(NULL, sizeof(*sem), PROT_READ | PROT_WRITE, MAP_SHARED,
-			shm_fd, 0)) == MAP_FAILED) {
-		nrm_log_error("mmap shared memory failed\n");
-		goto cleanup_shm;
-	}
-	close(shm_fd);
-	shm_fd = -1;
-	shm_unlink(SHM_NAME);
-	if (sem_init(sem, 1, 0) == -1) {
-		nrm_log_error("sem_init failed\n");
-		goto cleanup_shm;
 	}
 
 	int pid = fork();
@@ -254,17 +233,37 @@ int main(int argc, char **argv)
 	} else if (pid == 0) {
 		/* child, needs to exec the cmd */
 		/* wait for the parent to attach PAPI counters */
-		if (sem_wait(sem) == -1) {
-			nrm_log_error("sem_wait failed\n");
-			_exit(EXIT_FAILURE);
-		}
+		if (cmpinfo->attach_must_ptrace)
+			if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) == -1) {
+				nrm_log_error("ptrace(PTRACE_TRACEME) failed\n");
+				_exit(EXIT_FAILURE);
+			}
+
 		err = execvp(argv[optind], &argv[optind]);
 		nrm_log_error("Error executing command: %s\n",
-		              strerror(errno));
+			      strerror(errno));
 		_exit(EXIT_FAILURE);
 	}
 
-	/* us, need to sample counters */
+	if (cmpinfo->attach_must_ptrace) {
+		int status;
+
+		/* Wait for the child process to stop on execve(2).  */
+		if (waitpid(pid, &status, 0) == -1) {
+			nrm_log_error("waitpid error: %s\n",
+				      strerror(errno));
+			goto cleanup;
+                }
+
+		if (WIFSTOPPED(status) == 0)
+		{
+			nrm_log_error("Unexpected waitpid status: %d\n",
+				      status);
+			goto cleanup;
+		}
+	}
+
+	/* Need to sample counters */
 	err = PAPI_attach(EventSet, pid);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI eventset attach error: %s\n",
@@ -279,16 +278,20 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 	nrm_log_debug("PAPI started. Initializing event read/send to NRM\n");
-	if (sem_post(sem) == -1) {
-		nrm_log_error("sem_post failed\n");
-		goto cleanup;
-	}
 
 	nrm_time_t time;
 	if ((counters = malloc(EventCodeCnt * sizeof(*counters))) == NULL) {
 		nrm_log_error("Allocating counters failed\n");
 		goto cleanup;
 	}
+
+	if (cmpinfo->attach_must_ptrace) {
+		if (ptrace(PTRACE_CONT, pid, NULL, NULL) == -1) {
+			nrm_log_error("ptrace(PTRACE_TRACEME) failed\n");
+			goto cleanup;
+		}
+	}
+
 	do {
 		/* sleep for a frequency */
 		long long sleeptime = 1e9 / freq;
@@ -340,14 +343,6 @@ int main(int argc, char **argv)
 		nrm_client_send_event(client, time, sensors[i], scope, counters[i]);
 
 cleanup:
-	sem_destroy(sem);
-cleanup_shm:
-	if (sem != NULL && sem != MAP_FAILED)
-		munmap(sem, sizeof(*sem));
-	if (shm_fd != -1) {
-		close(shm_fd);
-		shm_unlink(SHM_NAME);
-	}
 	free(counters);
 cleanup_sensor:
 	for (int i = 0; i < EventCodeCnt; i++)
