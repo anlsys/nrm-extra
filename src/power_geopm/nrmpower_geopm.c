@@ -14,8 +14,8 @@
  *               and the NRM downstream interface. Resources detected via hwloc.
  */
 
-#include <stddef.h>
 #include <limits.h>
+#include <stddef.h>
 #define _GNU_SOURCE
 #include <assert.h>
 #include <errno.h>
@@ -46,7 +46,6 @@ volatile sig_atomic_t stop;
 static nrm_client_t *client;
 static nrm_scope_t *scope;
 static nrm_sensor_t *sensor;
-static int custom_scope = 0;
 
 static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
@@ -186,12 +185,12 @@ int main(int argc, char **argv)
 
 	// this loop will obtain our labels and tokens
 	int domain_type;
-	char *signal_name, *full_domain_name=NULL;
+	char *signal_name, full_domain_name[NAME_MAX + 1];
 	for (i = 0; i < n_signals; i++) {
 		// pull out requested signal, convert to integer label
 		void *p;
 		nrm_vector_get(signals, i, &p);
-		signal_name = (char*)p;
+		signal_name = (char *)p;
 		// SignalNames[i] = signal_name;
 		strcpy(SignalNames[i], signal_name);
 		domain_type = geopm_pio_signal_domain_type(signal_name);
@@ -205,10 +204,9 @@ int main(int argc, char **argv)
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
 		              full_domain_name);
 
-		// convert full name to last component. e.g.: GEOPM_DOMAIN_CPU
-		// -> CPU
-		// DomainTokens[i] = get_domain_label(full_domain_name);
-		strcpy(DomainTokens[i], get_domain_label(full_domain_name));
+		// turns out domains aren't returned as string versions of those
+		// enums
+		strcpy(DomainTokens[i], full_domain_name);
 		nrm_log_debug("We get token: %s. \n", DomainTokens[i]);
 	}
 
@@ -220,14 +218,16 @@ int main(int argc, char **argv)
 	assert(hwloc_topology_load(topology) == 0);
 
 	// nrm_scope_t *nrm_cpu_scopes[n_signals], *nrm_numa_scopes[n_signals],
-	//         *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals], *scopes[n_signals];
+	//         *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals],
+	//         *scopes[n_signals];
 
 	nrm_scope_t *custom_scopes[n_signals], *scopes[n_signals];
 
 	char *suffix, *scope_name;
 	int component_idxs[256], added, n_scopes = 0, n_numa_scopes = 0,
 	                                n_cpu_scopes = 0, n_custom_scopes = 0,
-	                                n_gpu_scopes = 0, cpu_idx, cpu, numa_id=0;
+	                                n_gpu_scopes = 0, cpu_idx, cpu,
+	                                numa_id = 0;
 	// TODO: determine numa_id from hwloc
 
 	for (i = 0; i < n_signals; i++) {
@@ -240,7 +240,8 @@ int main(int argc, char **argv)
 		                                              // should we use?
 		scope = nrm_scope_create(scope_name);
 
-		if (strcmp(suffix, "CPU")) {
+		// signals like CPU_POWER belong to "package"
+		if (strcmp(suffix, "cpu") || strcmp(suffix, "package")) {
 			// lets use hwloc CPU indexes instead
 			numanode = hwloc_get_obj_by_type(
 			        topology, HWLOC_OBJ_NUMANODE, numa_id);
@@ -249,14 +250,17 @@ int main(int argc, char **argv)
 			        cpu_idx = get_cpu_idx(topology, cpu);
 			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, cpu_idx);
 			hwloc_bitmap_foreach_end();
-		} else if (strcmp(suffix, "GPU")) {
+			n_cpu_scopes++;
+		} else if (strcmp(suffix, "gpu")) {
 			for (j = 0; j < num_domains; j++) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, j);
 			}
-		} else if (strcmp(suffix, "MEMORY")) {
+			n_gpu_scopes++;
+		} else if (strcmp(suffix, "memory")) {
 			for (j = 0; j < num_domains; j++) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, j);
 			}
+			n_numa_scopes++;
 		}
 		nrm_extra_find_scope(client, &scope, &added);
 		if (added) {
@@ -352,7 +356,7 @@ int main(int argc, char **argv)
 	for (j = 0; j < n_custom_scopes; j++) {
 		nrm_client_remove_scope(client, custom_scopes[j]);
 	}
-	for (j = 0; j < n_signals; j++) {
+	for (i = 0; i < n_signals; j++) {
 		nrm_scope_destroy(scopes[j]);
 	}
 
