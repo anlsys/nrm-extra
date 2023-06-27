@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -232,7 +231,6 @@ int main(int argc, char **argv)
 		goto cleanup;
 	} else if (pid == 0) {
 		/* child, needs to exec the cmd */
-		/* wait for the parent to attach PAPI counters */
 		if (cmpinfo->attach_must_ptrace)
 			if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) == -1) {
 				nrm_log_error("ptrace(PTRACE_TRACEME) failed\n");
@@ -245,6 +243,7 @@ int main(int argc, char **argv)
 		_exit(EXIT_FAILURE);
 	}
 
+	/* parent process */
 	if (cmpinfo->attach_must_ptrace) {
 		int status;
 
@@ -263,7 +262,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* Need to sample counters */
+	/* Need to attach counters to the child */
 	err = PAPI_attach(EventSet, pid);
 	if (err != PAPI_OK) {
 		nrm_log_error("PAPI eventset attach error: %s\n",
@@ -286,6 +285,7 @@ int main(int argc, char **argv)
 	}
 
 	if (cmpinfo->attach_must_ptrace) {
+		/* Let the child continue with execve(2).  */
 		if (ptrace(PTRACE_CONT, pid, NULL, NULL) == -1) {
 			nrm_log_error("ptrace(PTRACE_TRACEME) failed\n");
 			goto cleanup;
