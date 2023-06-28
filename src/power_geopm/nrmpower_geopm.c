@@ -51,6 +51,8 @@ static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
 static int rpc_port = 3456;
 
+#define assert__(x) for (; !(x); assert(x))
+
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
@@ -194,7 +196,11 @@ int main(int argc, char **argv)
 		// SignalNames[i] = signal_name;
 		strcpy(SignalNames[i], signal_name);
 		domain_type = geopm_pio_signal_domain_type(signal_name);
-		assert(domain_type >= 0); // GEOPM_DOMAIN_INVALID = -1
+		assert__(domain_type >= 0)
+		{
+			nrm_log_error(
+			        "Unable to parse domain. Either the signal name is incorrect, or you must sudo-run this utility.\n"); // GEOPM_DOMAIN_INVALID = -1
+		}
 		DomainTypes[i] = domain_type;
 
 		// convert integer label to full domain name
@@ -297,7 +303,7 @@ int main(int argc, char **argv)
 
 		err = nanosleep(&req, &rem);
 		if (err == -1 && errno == EINTR) {
-			nrm_log_error("interupted during sleep, exiting\n");
+			nrm_log_error("interrupted during sleep, exiting\n");
 			break;
 		}
 
@@ -321,8 +327,7 @@ int main(int argc, char **argv)
 			}
 			event_totals[i] = total;
 			nrm_log_debug("%s:%s - energy measurement: %d\n",
-			              domain_token, signal_name,
-			              event_totals[i]);
+			              domain_token, signal_name, total);
 			// need to get our matching scope
 			nrm_client_send_event(client, after_time, sensor,
 			                      scopes[i], total);
