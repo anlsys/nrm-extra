@@ -198,6 +198,7 @@ int main(int argc, char **argv)
 	assert(hwloc_topology_load(topology) == 0);
 
 	nrm_scope_t *custom_scopes[n_signals], *scopes[n_signals];
+	signal_info_t signal_info;
 
 	char *suffix, *scope_name;
 	int component_idxs[256], added, n_scopes = 0, n_numa_scopes = 0,
@@ -341,8 +342,8 @@ int main(int argc, char **argv)
 	for (j = 0; j < n_custom_scopes; j++) {
 		nrm_client_remove_scope(client, custom_scopes[j]);
 	}
-	for (i = 0; i < n_signals; j++) {
-		nrm_scope_destroy(scopes[j]);
+	for (i = 0; i < n_signals; i++) {
+		nrm_scope_destroy(scopes[i]);
 	}
 
 	nrm_log_debug("NRM scopes deleted.\n");
