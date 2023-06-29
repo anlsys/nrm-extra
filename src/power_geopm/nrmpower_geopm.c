@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 	assert(hwloc_topology_load(topology) == 0);
 
 	nrm_scope_t *custom_scopes[n_signals], *scopes[n_signals];
-	signal_info_t signal_info;
+	signal_info_t *signal_info;
 
 	char *suffix, *scope_name;
 	int component_idxs[256], added, n_scopes = 0, n_numa_scopes = 0,
