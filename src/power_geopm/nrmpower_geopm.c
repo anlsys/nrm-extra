@@ -66,11 +66,6 @@ void interrupt(int signum)
 	stop = 1;
 }
 
-double get_watts(double event_value, int64_t elapsed_time)
-{
-	return ((double)event_value / 1.0e6) / (elapsed_time / 1.0e9);
-}
-
 int get_cpu_idx(hwloc_topology_t topology, int cpu)
 {
 	hwloc_obj_t pu;
@@ -78,18 +73,9 @@ int get_cpu_idx(hwloc_topology_t topology, int cpu)
 	return pu->logical_index;
 }
 
-char *get_domain_label(char *string)
-{
-	char *label;
-	do {
-		label = strtok(string, "_");
-	} while (label != NULL);
-	return label; // should return last token after the last underscore
-}
-
 struct signal_info_s {
 	char *signal_name;
-	char *signal_token;
+	char *domain_token;
 	int domain_type;
 };
 
@@ -100,11 +86,13 @@ int main(int argc, char **argv)
 	int j, char_opt, err;
 	double freq = 1;
 	size_t i, MAX_SIGNAL_NAME_LENGTH = 55;
-	nrm_vector_t *signals = NULL;
+	nrm_vector_t *signal_args = NULL;
+	nrm_vector_t *signal_info_list = NULL;
 
 	// a vector of GEOPM signal names; will be pushed into by e.g.: -s
 	// DRAM_POWER -s CPU_POWER
-	assert(nrm_vector_create(&signals, sizeof(char*)) == NRM_SUCCESS);
+	assert(nrm_vector_create(&signal_args, sizeof(char*)) == NRM_SUCCESS);
+	assert(nrm_vector_create(&signal_info_list, sizeof(signal_info_t *)) == NRM_SUCCESS);
 
 	nrm_init(NULL, NULL);
 	assert(nrm_log_init(stderr, "nrm.extra.geopm") == 0);
@@ -135,7 +123,7 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			nrm_log_debug("Parsed signal %s\n", optarg);
-			nrm_vector_push_back(signals, optarg);
+			nrm_vector_push_back(signal_args, optarg);
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
@@ -168,30 +156,21 @@ int main(int argc, char **argv)
 	int nsignals = geopm_pio_num_signal_name();
 	assert(nsignals > 0); // just check that we can obtain signals
 
-	// we've stored all signals in vector, we need to store corresponding
-	// domain_type labels (ints), domain_name tokens (str) and
-	//	component idxs for those domains
-	// domain_type labels: used for sampling signals
-	// domain_name tokens: used for creating NRM scopes
-	// component idxs: will add to scopes, and used to sampling
-
 	size_t n_signals = 1;
-	assert(nrm_vector_length(signals, &n_signals) == NRM_SUCCESS);
+	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
 
-	int DomainTypes[n_signals];
-	char DomainTokens[n_signals][NAME_MAX];
-	char SignalNames[n_signals][NAME_MAX]; // only needed for signal reading
-
-	// this loop will obtain our labels and tokens
+	// this loop will obtain our signal information
 	int domain_type;
 	char *signal_name, full_domain_name[NAME_MAX + 1];
 	for (i = 0; i < n_signals; i++) {
-		// pull out requested signal, convert to integer label
 		void *p;
-		nrm_vector_get(signals, i, &p);
+		nrm_vector_get(signal_args, i, &p);
 		signal_name = (char *)p;
-		// SignalNames[i] = signal_name;
-		strcpy(SignalNames[i], signal_name);
+
+		signal_info_t *ret = calloc(1, sizeof(signal_info_t));
+		ret->signal_name = signal_name;
+		ret->domain_type = domain_type;
+
 		domain_type = geopm_pio_signal_domain_type(signal_name);
 		if (domain_type < 0)
 		{
@@ -199,31 +178,24 @@ int main(int argc, char **argv)
 			        "Unable to parse domain. Either the signal name is incorrect, or you must sudo-run this utility.\n"); // GEOPM_DOMAIN_INVALID = -1
 			exit(EXIT_FAILURE);
 		}
-		DomainTypes[i] = domain_type;
 
-		// convert integer label to full domain name
 		err = geopm_topo_domain_name(domain_type, NAME_MAX,
 		                             full_domain_name);
 		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
 		              full_domain_name);
+		ret->domain_token = full_domain_name;
 
-		// turns out domains aren't returned as string versions of those
-		// enums
-		strcpy(DomainTokens[i], full_domain_name);
-		nrm_log_debug("We get token: %s. \n", DomainTokens[i]);
+		nrm_log_debug("We get token: %s. \n", ret->domain_token);
+		nrm_vector_push_back(signal_info_list, ret);
 	}
 
 	hwloc_topology_t topology;
-	hwloc_obj_t numanode;
+	hwloc_obj_t socket;
 	hwloc_cpuset_t cpus;
 
 	assert(hwloc_topology_init(&topology) == 0);
 	assert(hwloc_topology_load(topology) == 0);
-
-	// nrm_scope_t *nrm_cpu_scopes[n_signals], *nrm_numa_scopes[n_signals],
-	//         *nrm_gpu_scopes[n_signals], *custom_scopes[n_signals],
-	//         *scopes[n_signals];
 
 	nrm_scope_t *custom_scopes[n_signals], *scopes[n_signals];
 
@@ -247,9 +219,9 @@ int main(int argc, char **argv)
 		// signals like CPU_POWER belong to "package"
 		if (strcmp(suffix, "cpu") || strcmp(suffix, "package")) {
 			// lets use hwloc CPU indexes instead
-			numanode = hwloc_get_obj_by_type(
-			        topology, HWLOC_OBJ_NUMANODE, numa_id);
-			cpus = numanode->cpuset;
+			socket = hwloc_get_obj_by_type(
+			        topology, HWLOC_OBJ_SOCKET, numa_id);
+			cpus = socket->cpuset;
 			hwloc_bitmap_foreach_begin(cpu, cpus)
 			        cpu_idx = get_cpu_idx(topology, cpu);
 			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, cpu_idx);
