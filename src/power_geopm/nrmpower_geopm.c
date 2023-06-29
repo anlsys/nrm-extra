@@ -85,14 +85,12 @@ int main(int argc, char **argv)
 {
 	int j, char_opt, err;
 	double freq = 1;
-	size_t i, MAX_SIGNAL_NAME_LENGTH = 55;
+	size_t i;
 	nrm_vector_t *signal_args = NULL;
 	nrm_vector_t *signal_info_list = NULL;
 
-	// a vector of GEOPM signal names; will be pushed into by e.g.: -s
-	// DRAM_POWER -s CPU_POWER
 	assert(nrm_vector_create(&signal_args, sizeof(char *)) == NRM_SUCCESS);
-	assert(nrm_vector_create(&signal_info_list, sizeof(signal_info_t *)) ==
+	assert(nrm_vector_create(&signal_info_list, sizeof(signal_info_t)) ==
 	       NRM_SUCCESS);
 
 	nrm_init(NULL, NULL);
@@ -124,7 +122,7 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			nrm_log_debug("Parsed signal %s\n", optarg);
-			nrm_vector_push_back(signal_args, optarg);
+			nrm_vector_push_back(signal_args, &optarg);
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
@@ -160,6 +158,14 @@ int main(int argc, char **argv)
 	size_t n_signals = 1;
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
 
+	if (n_signals == 0) {
+		const char *CPU_ENERGY = "CPU_ENERGY";
+		const char *DRAM_ENERGY = "DRAM_ENERGY";
+		nrm_vector_push_back(signal_args, &CPU_ENERGY);
+		nrm_vector_push_back(signal_args, &DRAM_ENERGY);
+		n_signals = 2;
+	}
+
 	// this loop will obtain our signal information
 	int domain_type;
 	char *signal_name, full_domain_name[NAME_MAX + 1];
@@ -170,7 +176,6 @@ int main(int argc, char **argv)
 
 		signal_info_t *ret = calloc(1, sizeof(signal_info_t));
 		ret->signal_name = signal_name;
-		ret->domain_type = domain_type;
 
 		domain_type = geopm_pio_signal_domain_type(signal_name);
 		if (domain_type < 0) {
@@ -178,6 +183,8 @@ int main(int argc, char **argv)
 			        "Unable to parse domain. Either the signal name is incorrect, or you must sudo-run this utility.\n"); // GEOPM_DOMAIN_INVALID = -1
 			exit(EXIT_FAILURE);
 		}
+
+		ret->domain_type = domain_type;
 
 		err = geopm_topo_domain_name(domain_type, NAME_MAX,
 		                             full_domain_name);
@@ -210,36 +217,45 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_info_list, i, &p);
-		signal_info = (signal_info_t *)p;
+		signal_info = (signal_info_t)p;
 
 		int num_domains =
 		        geopm_topo_num_domain(signal_info->domain_type);
 		assert(num_domains >= 0);
 		suffix = signal_info->domain_token;
 
-		err = nrm_extra_create_name_ssu("nrm.geopm", suffix, 0,
-		                                &scope_name); // what index
-		                                              // should we use?
-		scope = nrm_scope_create(scope_name);
-
 		// signals like CPU_POWER belong to "package"
-		if (strcmp(suffix, "cpu") || strcmp(suffix, "package")) {
-			// lets use hwloc CPU indexes instead
-			socket = hwloc_get_obj_by_type(
-			        topology, HWLOC_OBJ_SOCKET, numa_id);
-			cpus = socket->cpuset;
-			hwloc_bitmap_foreach_begin(cpu, cpus)
-			        cpu_idx = get_cpu_idx(topology, cpu);
-			nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU, cpu_idx);
-			hwloc_bitmap_foreach_end();
-			n_cpu_scopes++;
+		// creating scopes for each detected "package", "gpu", and
+		// "memory"/
+		if (strcmp(suffix, "package")) {
+			for (j = 0; j < num_domains; j++) {
+				err = nrm_extra_create_name_ssu(
+				        "nrm.geopm", suffix, j, &scope_name);
+				scope = nrm_scope_create(scope_name);
+
+				socket = hwloc_get_obj_by_type(
+				        topology, HWLOC_OBJ_SOCKET, j);
+				cpus = socket->cpuset;
+				hwloc_bitmap_foreach_begin(cpu, cpus)
+				        cpu_idx = get_cpu_idx(topology, cpu);
+				nrm_scope_add(scope, NRM_SCOPE_TYPE_CPU,
+				              cpu_idx);
+				hwloc_bitmap_foreach_end();
+				n_cpu_scopes++;
+			}
 		} else if (strcmp(suffix, "gpu")) {
 			for (j = 0; j < num_domains; j++) {
+				err = nrm_extra_create_name_ssu(
+				        "nrm.geopm", suffix, j, &scope_name);
+				scope = nrm_scope_create(scope_name);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, j);
 			}
 			n_gpu_scopes++;
 		} else if (strcmp(suffix, "memory")) {
 			for (j = 0; j < num_domains; j++) {
+				err = nrm_extra_create_name_ssu(
+				        "nrm.geopm", suffix, j, &scope_name);
+				scope = nrm_scope_create(scope_name);
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, j);
 			}
 			n_numa_scopes++;
@@ -259,10 +275,7 @@ int main(int argc, char **argv)
 
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
-	double *event_totals;
 
-	event_totals = calloc(n_signals, sizeof(double)); // converting then
-	                                                  // storing
 	stop = 0;
 	int num_domains;
 	char *domain_token;
@@ -289,21 +302,18 @@ int main(int argc, char **argv)
 		for (i = 0; i < n_signals; i++) {
 			void *p;
 			nrm_vector_get(signal_info_list, i, &p);
-			signal_info = (signal_info_t *)p;
+			signal_info = (signal_info_t)p;
 
 			num_domains =
 			        geopm_topo_num_domain(signal_info->domain_type);
 
-			double total = 0;
 			for (j = 0; j < num_domains; j++) { // accumulate
 				                            // measurements
 				double value = 0;
 				err = geopm_pio_read_signal(
 				        signal_info->signal_name,
 				        signal_info->domain_type, j, &value);
-				total += value;
 			}
-			event_totals[i] = total;
 			nrm_log_debug("%s:%s - energy measurement: %d\n",
 			              signal_info->domain_token,
 			              signal_info->signal_name, total);
@@ -322,7 +332,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_info_list, i, &p);
-		signal_info = (signal_info_t *)p;
+		signal_info = (signal_info_t)p;
 
 		num_domains = geopm_topo_num_domain(signal_info->domain_type);
 
@@ -332,9 +342,7 @@ int main(int argc, char **argv)
 			err = geopm_pio_read_signal(signal_info->signal_name,
 			                            signal_info->domain_type, j,
 			                            &value);
-			total += value;
 		}
-		event_totals[i] = total;
 		nrm_client_send_event(client, after_time, sensor, scopes[i],
 		                      total);
 	}
@@ -355,7 +363,6 @@ int main(int argc, char **argv)
 	nrm_vector_destroy(&signal_info_list);
 
 	nrm_finalize();
-	free(event_totals);
 	hwloc_bitmap_free(cpus);
 	hwloc_topology_destroy(topology);
 
