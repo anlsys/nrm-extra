@@ -51,8 +51,6 @@ static char *upstream_uri = "tcp://127.0.0.1";
 static int pub_port = 2345;
 static int rpc_port = 3456;
 
-#define assert__(x) for (; !(x); assert(x))
-
 char *usage =
         "usage: nrm-power [options] \n"
         "     options:\n"
@@ -106,8 +104,7 @@ int main(int argc, char **argv)
 
 	// a vector of GEOPM signal names; will be pushed into by e.g.: -s
 	// DRAM_POWER -s CPU_POWER
-	assert(nrm_vector_create(&signals, MAX_SIGNAL_NAME_LENGTH) ==
-	       NRM_SUCCESS);
+	assert(nrm_vector_create(&signals, sizeof(char*)) == NRM_SUCCESS);
 
 	nrm_init(NULL, NULL);
 	assert(nrm_log_init(stderr, "nrm.extra.geopm") == 0);
@@ -196,10 +193,11 @@ int main(int argc, char **argv)
 		// SignalNames[i] = signal_name;
 		strcpy(SignalNames[i], signal_name);
 		domain_type = geopm_pio_signal_domain_type(signal_name);
-		assert__(domain_type >= 0)
+		if (domain_type < 0)
 		{
 			nrm_log_error(
 			        "Unable to parse domain. Either the signal name is incorrect, or you must sudo-run this utility.\n"); // GEOPM_DOMAIN_INVALID = -1
+			exit(EXIT_FAILURE);
 		}
 		DomainTypes[i] = domain_type;
 
