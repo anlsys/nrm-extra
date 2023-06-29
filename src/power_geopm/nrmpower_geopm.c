@@ -91,8 +91,9 @@ int main(int argc, char **argv)
 
 	// a vector of GEOPM signal names; will be pushed into by e.g.: -s
 	// DRAM_POWER -s CPU_POWER
-	assert(nrm_vector_create(&signal_args, sizeof(char*)) == NRM_SUCCESS);
-	assert(nrm_vector_create(&signal_info_list, sizeof(signal_info_t *)) == NRM_SUCCESS);
+	assert(nrm_vector_create(&signal_args, sizeof(char *)) == NRM_SUCCESS);
+	assert(nrm_vector_create(&signal_info_list, sizeof(signal_info_t *)) ==
+	       NRM_SUCCESS);
 
 	nrm_init(NULL, NULL);
 	assert(nrm_log_init(stderr, "nrm.extra.geopm") == 0);
@@ -172,8 +173,7 @@ int main(int argc, char **argv)
 		ret->domain_type = domain_type;
 
 		domain_type = geopm_pio_signal_domain_type(signal_name);
-		if (domain_type < 0)
-		{
+		if (domain_type < 0) {
 			nrm_log_error(
 			        "Unable to parse domain. Either the signal name is incorrect, or you must sudo-run this utility.\n"); // GEOPM_DOMAIN_INVALID = -1
 			exit(EXIT_FAILURE);
@@ -207,9 +207,14 @@ int main(int argc, char **argv)
 	// TODO: determine numa_id from hwloc
 
 	for (i = 0; i < n_signals; i++) {
-		int num_domains = geopm_topo_num_domain(DomainTypes[i]);
+		void *p;
+		nrm_vector_get(signal_info_list, i, &p);
+		signal_info = (signal_info_t *)p;
+
+		int num_domains =
+		        geopm_topo_num_domain(signal_info->domain_type);
 		assert(num_domains >= 0);
-		suffix = DomainTokens[i];
+		suffix = signal_info->domain_token;
 
 		err = nrm_extra_create_name_ssu("nrm.geopm", suffix, 0,
 		                                &scope_name); // what index
@@ -281,23 +286,26 @@ int main(int argc, char **argv)
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
 		for (i = 0; i < n_signals; i++) {
-			signal_name = SignalNames[i];
-			domain_type = DomainTypes[i];
-			domain_token = DomainTokens[i];
+			void *p;
+			nrm_vector_get(signal_info_list, i, &p);
+			signal_info = (signal_info_t *)p;
 
-			num_domains = geopm_topo_num_domain(DomainTypes[i]);
+			num_domains =
+			        geopm_topo_num_domain(signal_info->domain_type);
 
 			double total = 0;
 			for (j = 0; j < num_domains; j++) { // accumulate
 				                            // measurements
 				double value = 0;
 				err = geopm_pio_read_signal(
-				        signal_name, domain_type, j, &value);
+				        signal_info->signal_name,
+				        signal_info->domain_type, j, &value);
 				total += value;
 			}
 			event_totals[i] = total;
 			nrm_log_debug("%s:%s - energy measurement: %d\n",
-			              domain_token, signal_name, total);
+			              signal_info->domain_token,
+			              signal_info->signal_name, total);
 			// need to get our matching scope
 			nrm_client_send_event(client, after_time, sensor,
 			                      scopes[i], total);
@@ -311,15 +319,17 @@ int main(int argc, char **argv)
 
 	/* final send here */
 	for (i = 0; i < n_signals; i++) {
-		signal_name = SignalNames[i];
-		domain_type = DomainTypes[i];
+		void *p;
+		nrm_vector_get(signal_info_list, i, &p);
+		signal_info = (signal_info_t *)p;
 
-		num_domains = geopm_topo_num_domain(DomainTypes[i]);
+		num_domains = geopm_topo_num_domain(signal_info->domain_type);
 
 		double total = 0;
 		for (j = 0; j < num_domains; j++) { // accumulate measurements
 			double value = 0;
-			err = geopm_pio_read_signal(signal_name, domain_type, j,
+			err = geopm_pio_read_signal(signal_info->signal_name,
+			                            signal_info->domain_type, j,
 			                            &value);
 			total += value;
 		}
@@ -340,8 +350,13 @@ int main(int argc, char **argv)
 	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
 
+	nrm_vector_destroy(&signal_args);
+	nrm_vector_destroy(&signal_info_list);
+
 	nrm_finalize();
 	free(event_totals);
+	hwloc_bitmap_free(cpus);
+	hwloc_topology_destroy(topology);
 
 	exit(EXIT_SUCCESS);
 }
