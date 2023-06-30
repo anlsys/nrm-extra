@@ -155,6 +155,7 @@ int main(int argc, char **argv)
 
 	int nsignals = geopm_pio_num_signal_name();
 	assert(nsignals > 0); // just check that we can obtain signals
+	nrm_log_debug("GEOPM detects %d possible signals\n". nsignals);
 
 	size_t n_signals = 1;
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
@@ -164,6 +165,7 @@ int main(int argc, char **argv)
 		const char *DRAM_ENERGY = "DRAM_ENERGY";
 		nrm_vector_push_back(signal_args, &CPU_ENERGY);
 		nrm_vector_push_back(signal_args, &DRAM_ENERGY);
+		nrm_log_debug("Measuring CPU_ENERGY and DRAM_ENERGY by default\n");
 		n_signals = 2;
 	}
 
@@ -174,6 +176,7 @@ int main(int argc, char **argv)
 		void *p;
 		nrm_vector_get(signal_args, i, &p);
 		signal_name = (char *)p;
+		nrm_log_debug("Retrieved %s for signal_info construction\n", signal_name);
 
 		signal_info_t *ret = calloc(1, sizeof(signal_info_t));
 		ret->signal_name = signal_name;
@@ -220,7 +223,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_info_list, i, &p);
-		signal_info = (signal_info_t*)p;
+		signal_info = (signal_info_t *)p;
 
 		for (j = 0; j < signal_info->num_domains; j++) {
 			err = nrm_extra_create_name_ssu(
@@ -290,7 +293,7 @@ int main(int argc, char **argv)
 		for (i = 0; i < n_signals; i++) {
 			void *p;
 			nrm_vector_get(signal_info_list, i, &p);
-			signal_info = (signal_info_t*)p;
+			signal_info = (signal_info_t *)p;
 
 			for (j = 0; j < signal_info->num_domains; j++) {
 				double value = 0;
@@ -318,7 +321,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_info_list, i, &p);
-		signal_info = (signal_info_t*)p;
+		signal_info = (signal_info_t *)p;
 
 		for (j = 0; j < signal_info->num_domains; j++) {
 			double value = 0;
