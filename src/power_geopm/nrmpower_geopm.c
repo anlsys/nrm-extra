@@ -74,8 +74,8 @@ int get_cpu_idx(hwloc_topology_t topology, int cpu)
 }
 
 struct signal_info_s {
-	char *signal_name;
-	char *domain_name;
+	nrm_string_t signal_name;
+	nrm_string_t domain_name;
 	int domain_type;
 	int num_domains;
 };
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
 	nrm_vector_t *signal_args = NULL;
 	nrm_vector_t *signal_info_list = NULL;
 
-	assert(nrm_vector_create(&signal_args, sizeof(char *)) == NRM_SUCCESS);
+	assert(nrm_vector_create(&signal_args, sizeof(nrm_string_t)) == NRM_SUCCESS);
 	assert(nrm_vector_create(&signal_info_list, sizeof(signal_info_t)) ==
 	       NRM_SUCCESS);
 
@@ -123,7 +123,8 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			nrm_log_debug("Parsed signal %s\n", optarg);
-			nrm_vector_push_back(signal_args, &optarg);
+			nrm_string_t cast_optarg = nrm_string_fromchar(optarg);
+			nrm_vector_push_back(signal_args, &cast_optarg);
 			break;
 		case 'v':
 			log_level = NRM_LOG_DEBUG;
@@ -160,22 +161,24 @@ int main(int argc, char **argv)
 	size_t n_signals = 1;
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
 
+	int used_default = 0
 	if (n_signals == 0) {
-		char *CPU_ENERGY = "CPU_ENERGY";
-		char *DRAM_ENERGY = "DRAM_ENERGY";
+		nrm_string_t CPU_ENERGY = nrm_string_fromchar("CPU_ENERGY");
+		nrm_string_t DRAM_ENERGY = nrm_string_fromchar("DRAM_ENERGY");
 		nrm_vector_push_back(signal_args, &CPU_ENERGY);
 		nrm_vector_push_back(signal_args, &DRAM_ENERGY);
 		nrm_log_debug("Measuring CPU_ENERGY and DRAM_ENERGY by default\n");
 		n_signals = 2;
+		used_default = 1;
 	}
 
 	// this loop will obtain our signal information
 	int domain_type;
-	char *signal_name, domain_name[NAME_MAX + 1];
+	nrm_string_t signal_name, domain_name[NAME_MAX + 1];
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_args, i, &p);
-		signal_name = (char *)p;
+		signal_name = nrm_string_t p;
 		nrm_log_debug("Retrieved %s for signal_info construction\n", signal_name);
 
 		signal_info_t *ret = calloc(1, sizeof(signal_info_t));
@@ -345,6 +348,11 @@ int main(int argc, char **argv)
 
 	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
+
+	if (used_default) {
+		nrm_string_decref(CPU_ENERGY);
+		nrm_string_decref(DRAM_ENERGY);
+	}
 
 	nrm_vector_destroy(&signal_args);
 	nrm_vector_destroy(&signal_info_list);
