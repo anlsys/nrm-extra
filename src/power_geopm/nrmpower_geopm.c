@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 	}
 
 	// this loop will obtain our signal information
-	int domain_type, num_domains;
+	int domain_type;
 	char *signal_name, domain_name[NAME_MAX + 1];
 	for (i = 0; i < n_signals; i++) {
 		void *p;
@@ -211,8 +211,7 @@ int main(int argc, char **argv)
 
 	char *scope_name;
 	int added, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0,
-	           n_custom_scopes = 0, n_gpu_scopes = 0, cpu_idx, cpu,
-	           numa_id = 0;
+	           n_custom_scopes = 0, n_gpu_scopes = 0, cpu_idx, cpu;
 
 	// signals like CPU_POWER belong to "package"
 	// creating scopes for each detected "package", "gpu", and
@@ -221,7 +220,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_info_list, i, &p);
-		signal_info = (signal_info_t)p;
+		signal_info = (signal_info_t*)p;
 
 		for (j = 0; j < signal_info->num_domains; j++) {
 			err = nrm_extra_create_name_ssu(
@@ -291,7 +290,7 @@ int main(int argc, char **argv)
 		for (i = 0; i < n_signals; i++) {
 			void *p;
 			nrm_vector_get(signal_info_list, i, &p);
-			signal_info = (signal_info_t)p;
+			signal_info = (signal_info_t*)p;
 
 			for (j = 0; j < signal_info->num_domains; j++) {
 				double value = 0;
@@ -319,7 +318,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_info_list, i, &p);
-		signal_info = (signal_info_t)p;
+		signal_info = (signal_info_t*)p;
 
 		for (j = 0; j < signal_info->num_domains; j++) {
 			double value = 0;
@@ -335,8 +334,8 @@ int main(int argc, char **argv)
 	for (j = 0; j < n_custom_scopes; j++) {
 		nrm_client_remove_scope(client, custom_scopes[j]);
 	}
-	for (i = 0; i < n_scopes; i++) {
-		nrm_scope_destroy(scopes[i]);
+	for (j = 0; j < n_scopes; j++) {
+		nrm_scope_destroy(scopes[j]);
 	}
 
 	nrm_log_debug("NRM scopes deleted.\n");
