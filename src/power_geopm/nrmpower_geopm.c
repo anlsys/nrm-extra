@@ -161,8 +161,8 @@ int main(int argc, char **argv)
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
 
 	if (n_signals == 0) {
-		const char *CPU_ENERGY = "CPU_ENERGY";
-		const char *DRAM_ENERGY = "DRAM_ENERGY";
+		char *CPU_ENERGY = "CPU_ENERGY";
+		char *DRAM_ENERGY = "DRAM_ENERGY";
 		nrm_vector_push_back(signal_args, &CPU_ENERGY);
 		nrm_vector_push_back(signal_args, &DRAM_ENERGY);
 		nrm_log_debug("Measuring CPU_ENERGY and DRAM_ENERGY by default\n");
