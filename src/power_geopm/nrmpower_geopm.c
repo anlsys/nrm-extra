@@ -41,7 +41,7 @@
 #include "extra.h"
 
 static int log_level = NRM_LOG_DEBUG;
-volatile sig_atomic_t stop;
+volatile sig_atomic_t stop = 0;
 
 static nrm_client_t *client;
 static nrm_scope_t *scope;
@@ -75,8 +75,9 @@ int get_cpu_idx(hwloc_topology_t topology, int cpu)
 
 struct signal_info_s {
 	char *signal_name;
-	char *domain_token;
+	char *domain_name;
 	int domain_type;
+	int num_domains;
 };
 
 typedef struct signal_info_s signal_info_t;
@@ -167,8 +168,8 @@ int main(int argc, char **argv)
 	}
 
 	// this loop will obtain our signal information
-	int domain_type;
-	char *signal_name, full_domain_name[NAME_MAX + 1];
+	int domain_type, num_domains;
+	char *signal_name, domain_name[NAME_MAX + 1];
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_args, i, &p);
@@ -185,15 +186,16 @@ int main(int argc, char **argv)
 		}
 
 		ret->domain_type = domain_type;
+		ret->num_domains = geopm_topo_num_domain(domain_type);
+		assert(ret->num_domains >= 0);
 
 		err = geopm_topo_domain_name(domain_type, NAME_MAX,
-		                             full_domain_name);
+		                             domain_name);
 		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
-		              full_domain_name);
-		ret->domain_token = full_domain_name;
+		              domain_name);
+		ret->domain_name = domain_name;
 
-		nrm_log_debug("We get token: %s. \n", ret->domain_token);
 		nrm_vector_push_back(signal_info_list, ret);
 	}
 
@@ -207,31 +209,26 @@ int main(int argc, char **argv)
 	nrm_scope_t *custom_scopes[n_signals], *scopes[n_signals];
 	signal_info_t *signal_info;
 
-	char *suffix, *scope_name;
-	int component_idxs[256], added, n_scopes = 0, n_numa_scopes = 0,
-	                                n_cpu_scopes = 0, n_custom_scopes = 0,
-	                                n_gpu_scopes = 0, cpu_idx, cpu,
-	                                numa_id = 0;
-	// TODO: determine numa_id from hwloc
+	char *scope_name;
+	int added, n_scopes = 0, n_numa_scopes = 0, n_cpu_scopes = 0,
+	           n_custom_scopes = 0, n_gpu_scopes = 0, cpu_idx, cpu,
+	           numa_id = 0;
+
+	// signals like CPU_POWER belong to "package"
+	// creating scopes for each detected "package", "gpu", and
+	// "memory"/
 
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_info_list, i, &p);
 		signal_info = (signal_info_t)p;
 
-		int num_domains =
-		        geopm_topo_num_domain(signal_info->domain_type);
-		assert(num_domains >= 0);
-		suffix = signal_info->domain_token;
-
-		// signals like CPU_POWER belong to "package"
-		// creating scopes for each detected "package", "gpu", and
-		// "memory"/
-		if (strcmp(suffix, "package")) {
-			for (j = 0; j < num_domains; j++) {
-				err = nrm_extra_create_name_ssu(
-				        "nrm.geopm", suffix, j, &scope_name);
-				scope = nrm_scope_create(scope_name);
+		for (j = 0; j < signal_info->num_domains; j++) {
+			err = nrm_extra_create_name_ssu(
+			        "nrm.geopm", signal_info->domain_name, j,
+			        &scope_name);
+			scope = nrm_scope_create(scope_name);
+			if (strcmp(signal_info->domain_name, "package")) {
 
 				socket = hwloc_get_obj_by_type(
 				        topology, HWLOC_OBJ_SOCKET, j);
@@ -242,30 +239,22 @@ int main(int argc, char **argv)
 				              cpu_idx);
 				hwloc_bitmap_foreach_end();
 				n_cpu_scopes++;
-			}
-		} else if (strcmp(suffix, "gpu")) {
-			for (j = 0; j < num_domains; j++) {
-				err = nrm_extra_create_name_ssu(
-				        "nrm.geopm", suffix, j, &scope_name);
-				scope = nrm_scope_create(scope_name);
+
+			} else if (strcmp(signal_info->domain_name, "gpu")) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_GPU, j);
-			}
-			n_gpu_scopes++;
-		} else if (strcmp(suffix, "memory")) {
-			for (j = 0; j < num_domains; j++) {
-				err = nrm_extra_create_name_ssu(
-				        "nrm.geopm", suffix, j, &scope_name);
-				scope = nrm_scope_create(scope_name);
+
+			} else if (strcmp(signal_info->domain_name, "memory")) {
 				nrm_scope_add(scope, NRM_SCOPE_TYPE_NUMA, j);
 			}
-			n_numa_scopes++;
+
+			scopes[n_scopes] = scope;
+			n_scopes++;
+			nrm_extra_find_scope(client, &scope, &added);
+			if (added) {
+				custom_scopes[n_custom_scopes] = scope;
+				n_custom_scopes++;
+			}
 		}
-		nrm_extra_find_scope(client, &scope, &added);
-		if (added) {
-			custom_scopes[n_custom_scopes] = scope;
-			n_custom_scopes++;
-		}
-		scopes[i] = scope;
 	}
 
 	nrm_log_debug(
@@ -276,10 +265,8 @@ int main(int argc, char **argv)
 	nrm_time_t before_time, after_time;
 	int64_t elapsed_time;
 
-	stop = 0;
-	int num_domains;
-	char *domain_token;
 	double sleeptime = 1 / freq;
+	int scope_idx;
 
 	while (true) {
 
@@ -299,27 +286,27 @@ int main(int argc, char **argv)
 		nrm_time_gettime(&after_time);
 		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
+		scope_idx = 0;
+
 		for (i = 0; i < n_signals; i++) {
 			void *p;
 			nrm_vector_get(signal_info_list, i, &p);
 			signal_info = (signal_info_t)p;
 
-			num_domains =
-			        geopm_topo_num_domain(signal_info->domain_type);
-
-			for (j = 0; j < num_domains; j++) { // accumulate
-				                            // measurements
+			for (j = 0; j < signal_info->num_domains; j++) {
 				double value = 0;
 				err = geopm_pio_read_signal(
 				        signal_info->signal_name,
 				        signal_info->domain_type, j, &value);
+				nrm_log_debug(
+				        "%s.%d:%s - energy measurement: %d\n",
+				        signal_info->domain_name, j,
+				        signal_info->signal_name, value);
+				nrm_client_send_event(client, after_time,
+				                      sensor, scopes[scope_idx],
+				                      value);
+				scope_idx++;
 			}
-			nrm_log_debug("%s:%s - energy measurement: %d\n",
-			              signal_info->domain_token,
-			              signal_info->signal_name, total);
-			// need to get our matching scope
-			nrm_client_send_event(client, after_time, sensor,
-			                      scopes[i], total);
 		}
 
 		if (err == -1 || errno == EINTR) {
@@ -334,23 +321,21 @@ int main(int argc, char **argv)
 		nrm_vector_get(signal_info_list, i, &p);
 		signal_info = (signal_info_t)p;
 
-		num_domains = geopm_topo_num_domain(signal_info->domain_type);
-
-		double total = 0;
-		for (j = 0; j < num_domains; j++) { // accumulate measurements
+		for (j = 0; j < signal_info->num_domains; j++) {
 			double value = 0;
 			err = geopm_pio_read_signal(signal_info->signal_name,
 			                            signal_info->domain_type, j,
 			                            &value);
+			nrm_client_send_event(client, after_time, sensor,
+			                      scopes[scope_idx], value);
+			scope_idx++;
 		}
-		nrm_client_send_event(client, after_time, sensor, scopes[i],
-		                      total);
 	}
 
 	for (j = 0; j < n_custom_scopes; j++) {
 		nrm_client_remove_scope(client, custom_scopes[j]);
 	}
-	for (i = 0; i < n_signals; i++) {
+	for (i = 0; i < n_scopes; i++) {
 		nrm_scope_destroy(scopes[i]);
 	}
 
