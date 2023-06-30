@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 
 	int nsignals = geopm_pio_num_signal_name();
 	assert(nsignals > 0); // just check that we can obtain signals
-	nrm_log_debug("GEOPM detects %d possible signals\n". nsignals);
+	nrm_log_debug("GEOPM detects %d possible signals\n", nsignals);
 
 	size_t n_signals = 1;
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
