@@ -90,7 +90,8 @@ int main(int argc, char **argv)
 	nrm_vector_t *signal_args = NULL;
 	nrm_vector_t *signal_info_list = NULL;
 
-	assert(nrm_vector_create(&signal_args, sizeof(nrm_string_t)) == NRM_SUCCESS);
+	assert(nrm_vector_create(&signal_args, sizeof(nrm_string_t)) ==
+	       NRM_SUCCESS);
 	assert(nrm_vector_create(&signal_info_list, sizeof(signal_info_t)) ==
 	       NRM_SUCCESS);
 
@@ -161,13 +162,14 @@ int main(int argc, char **argv)
 	size_t n_signals = 1;
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
 
-	int used_default = 0
-	if (n_signals == 0) {
+	int used_default = 0 if (n_signals == 0)
+	{
 		nrm_string_t CPU_ENERGY = nrm_string_fromchar("CPU_ENERGY");
 		nrm_string_t DRAM_ENERGY = nrm_string_fromchar("DRAM_ENERGY");
 		nrm_vector_push_back(signal_args, &CPU_ENERGY);
 		nrm_vector_push_back(signal_args, &DRAM_ENERGY);
-		nrm_log_debug("Measuring CPU_ENERGY and DRAM_ENERGY by default\n");
+		nrm_log_debug(
+		        "Measuring CPU_ENERGY and DRAM_ENERGY by default\n");
 		n_signals = 2;
 		used_default = 1;
 	}
@@ -179,7 +181,8 @@ int main(int argc, char **argv)
 		void *p;
 		nrm_vector_get(signal_args, i, &p);
 		signal_name = nrm_string_t p;
-		nrm_log_debug("Retrieved %s for signal_info construction\n", signal_name);
+		nrm_log_debug("Retrieved %s for signal_info construction\n",
+		              signal_name);
 
 		signal_info_t *ret = calloc(1, sizeof(signal_info_t));
 		ret->signal_name = signal_name;
