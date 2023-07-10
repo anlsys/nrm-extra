@@ -164,8 +164,8 @@ int main(int argc, char **argv)
 
 	int used_default = 0;
 	nrm_string_t CPU_ENERGY = nrm_string_fromchar("CPU_ENERGY");
-	nrm_string_t DRAM_ENERGY = nrm_string_fromchar("DRAM_ENERGY");	
-	if (n_signals == 0){
+	nrm_string_t DRAM_ENERGY = nrm_string_fromchar("DRAM_ENERGY");
+	if (n_signals == 0) {
 		nrm_vector_push_back(signal_args, &CPU_ENERGY);
 		nrm_vector_push_back(signal_args, &DRAM_ENERGY);
 		nrm_log_debug(
