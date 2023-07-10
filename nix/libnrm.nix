@@ -1,4 +1,4 @@
-{ stdenv, autoreconfHook, pkgconfig, zeromq, czmq, jansson, check, protobufc, git, hwloc, bats }:
+{ stdenv, autoreconfHook, pkgconfig, zeromq, czmq, jansson, check, protobufc, hwloc, git, bats }:
 stdenv.mkDerivation {
   src = fetchGit {
     url = "https://github.com/anlsys/libnrm.git";
