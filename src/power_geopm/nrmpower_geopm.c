@@ -162,10 +162,10 @@ int main(int argc, char **argv)
 	size_t n_signals = 1;
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
 
-	int used_default = 0 if (n_signals == 0)
-	{
-		nrm_string_t CPU_ENERGY = nrm_string_fromchar("CPU_ENERGY");
-		nrm_string_t DRAM_ENERGY = nrm_string_fromchar("DRAM_ENERGY");
+	int used_default = 0;
+	nrm_string_t CPU_ENERGY = nrm_string_fromchar("CPU_ENERGY");
+	nrm_string_t DRAM_ENERGY = nrm_string_fromchar("DRAM_ENERGY");	
+	if (n_signals == 0){
 		nrm_vector_push_back(signal_args, &CPU_ENERGY);
 		nrm_vector_push_back(signal_args, &DRAM_ENERGY);
 		nrm_log_debug(
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
 		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
 		              domain_name);
-		ret->domain_name = domain_name;
+		ret->domain_name = nrm_string_t domain_name;
 
 		nrm_vector_push_back(signal_info_list, ret);
 	}
