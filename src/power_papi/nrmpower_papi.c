@@ -338,8 +338,9 @@ int main(int argc, char **argv)
 			event = EventNames[i];
 
 			if (is_energy_event(event, DataTypes[i])) {
-				watts_value = get_watts(event_values[i] - event_totals[i] * 1e6,
-				                        elapsed_time);
+				watts_value = get_watts(
+				        event_values[i] - event_totals[i] * 1e6,
+				        elapsed_time);
 				numa_id = parse_numa_id(event); // should match
 				                                // NUMANODE's
 				                                // logical ID
@@ -351,12 +352,12 @@ int main(int argc, char **argv)
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
 				}
-				nrm_log_debug(
-				        "%-45s%4f J (avg. power %f W)\n",
-				        EventNames[i], event_totals[i],
-				        watts_value);
+				nrm_log_debug("%-45s%4f J (avg. power %f W)\n",
+				              EventNames[i], event_totals[i],
+				              watts_value);
 
-				err = nrm_client_send_event(client, current_time,
+				err = nrm_client_send_event(client,
+				                            current_time,
 				                            sensor, scope,
 				                            event_totals[i]);
 			}
@@ -382,7 +383,8 @@ int main(int argc, char **argv)
 
 			if (is_energy_event(event, DataTypes[i])) {
 				numa_id = parse_numa_id(event); // should match
-				                                // NUMANODE's logical ID
+				                                // NUMANODE's
+				                                // logical ID
 
 				event_totals[i] = event_values[i] / 1e6;
 
@@ -391,7 +393,8 @@ int main(int argc, char **argv)
 				} else {
 					scope = nrm_cpu_scopes[numa_id];
 				}
-				nrm_client_send_event(client, current_time, sensor, scope,
+				nrm_client_send_event(client, current_time,
+				                      sensor, scope,
 				                      event_totals[i]);
 			}
 		}
