@@ -36,7 +36,7 @@
 
 #include "extra.h"
 
-static int log_level = NRM_LOG_DEBUG;
+static int log_level = NRM_LOG_ERROR;
 volatile sig_atomic_t stop;
 
 static nrm_client_t *client;
@@ -105,10 +105,9 @@ int main(int argc, char **argv)
 	// register callback handler for interrupt
 	signal(SIGINT, interrupt);
 
-	// TODO: fix "-v" not being parsed as verbose
 	while (1) {
 		static struct option long_options[] = {
-		        {"verbose", no_argument, &log_level, 1},
+		        {"verbose", no_argument, 0, 'v'},
 		        {"help", no_argument, 0, 'h'},
 		        {"frequency", required_argument, 0, 'f'},
 		        {0, 0, 0, 0}};
@@ -150,8 +149,7 @@ int main(int argc, char **argv)
 	assert(client != NULL);
 
 	// create sensor
-	const char *name = "nrm.sensor.power-papi";
-	sensor = nrm_sensor_create(name);
+	sensor = nrm_sensor_create("nrm.sensor.power-papi");
 
 	// client add sensor
 	assert(nrm_client_add_sensor(client, sensor) == 0);
@@ -301,7 +299,7 @@ int main(int argc, char **argv)
 	        n_scopes, n_numa_scopes, n_cpu_scopes, n_custom_scopes);
 
 	long long *event_values;
-	nrm_time_t before_time, after_time;
+	nrm_time_t last_time, current_time;
 	int64_t elapsed_time;
 	double watts_value, *event_totals;
 
@@ -309,19 +307,19 @@ int main(int argc, char **argv)
 	event_totals = calloc(num_events, sizeof(double)); // converting then
 	                                                   // storing
 
+	nrm_time_gettime(&last_time);
+
+	assert(PAPI_start(EventSet) == PAPI_OK);
+
 	stop = 0;
 	double sleeptime = 1 / freq;
 
 	while (true) {
 
-		nrm_time_gettime(&before_time);
-
-		assert(PAPI_start(EventSet) == PAPI_OK);
-
 		/* sleep for a frequency */
 		struct timespec req, rem;
-		req.tv_sec = ceil(sleeptime);
-		req.tv_nsec = sleeptime * 1e9 - ceil(sleeptime) * 1e9;
+		req.tv_sec = sleeptime;
+		req.tv_nsec = (sleeptime - req.tv_sec) * 1e9;
 
 		err = nanosleep(&req, &rem);
 		if (err == -1 && errno == EINTR) {
@@ -329,24 +327,24 @@ int main(int argc, char **argv)
 			break;
 		}
 
-		nrm_time_gettime(&after_time);
-		elapsed_time = nrm_time_diff(&before_time, &after_time);
+		// Read EventSet measurements into "event_values"...
+		assert(PAPI_read(EventSet, event_values) == PAPI_OK);
 
-		// Stop and read EventSet measurements into "event_values"...
-		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
+		nrm_time_gettime(&current_time);
+		elapsed_time = nrm_time_diff(&last_time, &current_time);
 
 		nrm_log_debug("scaled energy measurements:\n");
 		for (i = 0; i < num_events; i++) {
 			event = EventNames[i];
 
 			if (is_energy_event(event, DataTypes[i])) {
-				watts_value = get_watts(event_values[i],
+				watts_value = get_watts(event_values[i] - event_totals[i] * 1e6,
 				                        elapsed_time);
 				numa_id = parse_numa_id(event); // should match
 				                                // NUMANODE's
 				                                // logical ID
 
-				event_totals[i] += watts_value;
+				event_totals[i] = event_values[i] / 1e6;
 
 				if (is_NUMA_event(event)) {
 					scope = nrm_numa_scopes[numa_id];
@@ -354,11 +352,11 @@ int main(int argc, char **argv)
 					scope = nrm_cpu_scopes[numa_id];
 				}
 				nrm_log_debug(
-				        "%-45s%4i uj (Total Power %f W)\n",
-				        EventNames[i], event_values[i],
-				        event_totals[i]);
+				        "%-45s%4f J (avg. power %f W)\n",
+				        EventNames[i], event_totals[i],
+				        watts_value);
 
-				err = nrm_client_send_event(client, after_time,
+				err = nrm_client_send_event(client, current_time,
 				                            sensor, scope,
 				                            event_totals[i]);
 			}
@@ -367,32 +365,35 @@ int main(int argc, char **argv)
 			nrm_log_error("Interrupted. Exiting\n");
 			break;
 		}
+
+		last_time = current_time;
 	}
 
 	int papi_status;
 	assert(PAPI_state(EventSet, &papi_status) == PAPI_OK);
 	if (papi_status == PAPI_RUNNING) {
 		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
-	}
 
-	/* final send here */
-	for (i = 0; i < num_events; i++) {
-		event = EventNames[i];
+		nrm_time_gettime(&current_time);
 
-		if (is_energy_event(event, DataTypes[i])) {
-			watts_value = get_watts(event_values[i], elapsed_time);
-			numa_id = parse_numa_id(event); // should match
-			                                // NUMANODE's logical ID
+		/* final send here */
+		for (i = 0; i < num_events; i++) {
+			event = EventNames[i];
 
-			event_totals[i] += watts_value;
+			if (is_energy_event(event, DataTypes[i])) {
+				numa_id = parse_numa_id(event); // should match
+				                                // NUMANODE's logical ID
 
-			if (is_NUMA_event(event)) {
-				scope = nrm_numa_scopes[numa_id];
-			} else {
-				scope = nrm_cpu_scopes[numa_id];
+				event_totals[i] = event_values[i] / 1e6;
+
+				if (is_NUMA_event(event)) {
+					scope = nrm_numa_scopes[numa_id];
+				} else {
+					scope = nrm_cpu_scopes[numa_id];
+				}
+				nrm_client_send_event(client, current_time, sensor, scope,
+				                      event_totals[i]);
 			}
-			nrm_client_send_event(client, after_time, sensor, scope,
-			                      event_totals[i]);
 		}
 	}
 
