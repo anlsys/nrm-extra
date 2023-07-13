@@ -162,7 +162,6 @@ int main(int argc, char **argv)
 	size_t n_signals = 1;
 	assert(nrm_vector_length(signal_args, &n_signals) == NRM_SUCCESS);
 
-	int used_default = 0;
 	nrm_string_t CPU_ENERGY = nrm_string_fromchar("CPU_ENERGY");
 	nrm_string_t DRAM_ENERGY = nrm_string_fromchar("DRAM_ENERGY");
 	if (n_signals == 0) {
@@ -171,23 +170,22 @@ int main(int argc, char **argv)
 		nrm_log_debug(
 		        "Measuring CPU_ENERGY and DRAM_ENERGY by default\n");
 		n_signals = 2;
-		used_default = 1;
 	}
 
 	// this loop will obtain our signal information
 	int domain_type;
-	nrm_string_t signal_name, domain_name[NAME_MAX + 1];
+	nrm_string_t *domain_name = malloc(256), *signal_name;
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_args, i, &p);
-		signal_name = nrm_string_t p;
+		signal_name = (nrm_string_t*) p;
 		nrm_log_debug("Retrieved %s for signal_info construction\n",
-		              signal_name);
+		              *signal_name);
 
 		signal_info_t *ret = calloc(1, sizeof(signal_info_t));
-		ret->signal_name = signal_name;
+		ret->signal_name = *signal_name;
 
-		domain_type = geopm_pio_signal_domain_type(signal_name);
+		domain_type = geopm_pio_signal_domain_type(*signal_name);
 		if (domain_type < 0) {
 			nrm_log_error(
 			        "Unable to parse domain. Either the signal name is incorrect, or you must sudo-run this utility.\n"); // GEOPM_DOMAIN_INVALID = -1
@@ -199,11 +197,11 @@ int main(int argc, char **argv)
 		assert(ret->num_domains >= 0);
 
 		err = geopm_topo_domain_name(domain_type, NAME_MAX,
-		                             domain_name);
+		                             *domain_name);
 		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
-		              domain_name);
-		ret->domain_name = nrm_string_t domain_name;
+		              *domain_name);
+		ret->domain_name = (nrm_string_t) domain_name;
 
 		nrm_vector_push_back(signal_info_list, ret);
 	}
@@ -352,10 +350,8 @@ int main(int argc, char **argv)
 	nrm_sensor_destroy(&sensor);
 	nrm_client_destroy(&client);
 
-	if (used_default) {
-		nrm_string_decref(CPU_ENERGY);
-		nrm_string_decref(DRAM_ENERGY);
-	}
+	nrm_string_decref(CPU_ENERGY);
+	nrm_string_decref(DRAM_ENERGY);
 
 	nrm_vector_destroy(&signal_args);
 	nrm_vector_destroy(&signal_info_list);
