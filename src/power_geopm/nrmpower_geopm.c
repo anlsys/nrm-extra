@@ -174,7 +174,8 @@ int main(int argc, char **argv)
 
 	// this loop will obtain our signal information
 	int domain_type;
-	nrm_string_t *domain_name = malloc(256), *signal_name;
+	nrm_string_t *signal_name;
+	char domain_name[NAME_MAX+1];
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_args, i, &p);
@@ -197,10 +198,10 @@ int main(int argc, char **argv)
 		assert(ret->num_domains >= 0);
 
 		err = geopm_topo_domain_name(domain_type, NAME_MAX,
-		                             *domain_name);
+		                             domain_name);
 		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
-		              *domain_name);
+		              domain_name);
 		ret->domain_name = (nrm_string_t) domain_name;
 
 		nrm_vector_push_back(signal_info_list, ret);
