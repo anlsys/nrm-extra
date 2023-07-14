@@ -175,11 +175,11 @@ int main(int argc, char **argv)
 	// this loop will obtain our signal information
 	int domain_type;
 	nrm_string_t *signal_name;
-	char domain_name[NAME_MAX+1];
+	char domain_name[NAME_MAX + 1];
 	for (i = 0; i < n_signals; i++) {
 		void *p;
 		nrm_vector_get(signal_args, i, &p);
-		signal_name = (nrm_string_t*) p;
+		signal_name = (nrm_string_t *)p;
 		nrm_log_debug("Retrieved %s for signal_info construction\n",
 		              *signal_name);
 
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
 		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
 		              domain_name);
-		ret->domain_name = (nrm_string_t) domain_name;
+		ret->domain_name = (nrm_string_t)domain_name;
 
 		nrm_vector_push_back(signal_info_list, ret);
 	}
@@ -270,7 +270,6 @@ int main(int argc, char **argv)
 	        n_custom_scopes);
 
 	nrm_time_t before_time, after_time;
-	int64_t elapsed_time;
 
 	double sleeptime = 1 / freq;
 	int scope_idx;
@@ -291,7 +290,6 @@ int main(int argc, char **argv)
 		}
 
 		nrm_time_gettime(&after_time);
-		elapsed_time = nrm_time_diff(&before_time, &after_time);
 
 		scope_idx = 0;
 
@@ -306,7 +304,7 @@ int main(int argc, char **argv)
 				        signal_info->signal_name,
 				        signal_info->domain_type, j, &value);
 				nrm_log_debug(
-				        "%s.%d:%s - energy measurement: %d\n",
+				        "%s.%d:%s - energy measurement: %f\n",
 				        signal_info->domain_name, j,
 				        signal_info->signal_name, value);
 				nrm_client_send_event(client, after_time,
