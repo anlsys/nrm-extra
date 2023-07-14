@@ -7,6 +7,6 @@ stdenv.mkDerivation {
   name = "libnrm";
   prePatch = "echo 0.8.0 > .tarball-version";
   nativeBuildInputs = [ autoreconfHook pkgconfig git ];
-  buildInputs = [ czmq jansson check protobufc hwloc bats ];
+  buildInputs = [ czmq jansson check protobufc hwloc bats papi ];
   propagatedBuildInputs = [ zeromq ];
 }
