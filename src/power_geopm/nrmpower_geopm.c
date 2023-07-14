@@ -75,7 +75,7 @@ int get_cpu_idx(hwloc_topology_t topology, int cpu)
 
 struct signal_info_s {
 	nrm_string_t signal_name;
-	nrm_string_t domain_name;
+	char *domain_name;
 	int domain_type;
 	int num_domains;
 };
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
 		assert(err == 0);
 		nrm_log_debug("We get signal: %s. Main screen turn on.\n",
 		              domain_name);
-		ret->domain_name = (nrm_string_t)domain_name;
+		ret->domain_name = domain_name;
 
 		nrm_vector_push_back(signal_info_list, ret);
 	}
