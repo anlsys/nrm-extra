@@ -41,3 +41,11 @@ nrm_power_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @HWLOC_CFLAGS@ @J
 nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
 bin_PROGRAMS += nrm-power-variorum
 endif
+
+if HAVE_GEOPM
+nrm_power_geopm_SOURCES = power_geopm/nrmpower_geopm.c
+nrm_power_geopm_LDADD = libcommon.la
+nrm_power_geopm_CFLAGS = $(COMMON_CFLAGS) @GEOPM_CFLAGS@ @HWLOC_CFLAGS@ @JANSSON_CFLAGS@
+nrm_power_geopm_LDFLAGS = $(COMMON_LDFLAGS) @GEOPM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
+bin_PROGRAMS += nrm-power-geopm
+endif
