@@ -298,6 +298,7 @@ int main(int argc, char **argv)
 				        [strlen(EventInfo.long_descr) - 1] =
 				        '\0';
 			EventDescs[num_events] = strdup(EventInfo.long_descr);
+			nrm_log_debug("long_descr %s\n", EventInfo.long_descr);
 		} else
 			EventDescs[num_events] = NULL;
 
@@ -341,7 +342,7 @@ int main(int argc, char **argv)
 			                              EventDescs, num_events,
 			                              &zone_desc)) == -1) {
 				nrm_log_debug(
-				        "skipping; not part of a package\n (%s)",
+				        "skipping; not part of a package (%s)\n",
 				        zone_desc);
 				continue;
 			}
