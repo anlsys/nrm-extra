@@ -60,7 +60,6 @@ char *usage =
 // handler for interrupt?
 void interrupt(int signum)
 {
-	nrm_log_debug("Interrupt caught. Exiting loop.\n");
 	stop = 1;
 }
 
@@ -180,9 +179,6 @@ int main(int argc, char **argv)
 {
 	int i, j, char_opt, err;
 	double freq = 1;
-
-	// register callback handler for interrupt
-	signal(SIGINT, interrupt);
 
 	while (1) {
 		static struct option long_options[] = {
@@ -418,6 +414,10 @@ int main(int argc, char **argv)
 		}
 	}
 
+	if (n_energy_events == 0) {
+		nrm_log_error("No relevant energy events detected!\n");
+		exit(EXIT_FAILURE);
+	}
 	nrm_log_debug("%d relevant energy events detected.\n", n_energy_events);
 	nrm_log_debug("NRM scopes initialized: %d NUMA, %d CPU (%d new)\n",
 	              n_numa_scopes, n_cpu_scopes, n_scopes);
@@ -431,6 +431,9 @@ int main(int argc, char **argv)
 	event_totals = calloc(n_energy_events, sizeof(double)); // converting
 	                                                        // then storing
 
+	// register callback handler for interrupt
+	signal(SIGINT, interrupt);
+
 	nrm_time_gettime(&last_time);
 
 	assert(PAPI_start(EventSet) == PAPI_OK);
@@ -438,7 +441,7 @@ int main(int argc, char **argv)
 	stop = 0;
 	double sleeptime = 1 / freq;
 
-	while (true) {
+	while (!stop) {
 
 		/* sleep for a frequency */
 		struct timespec req, rem;
@@ -446,10 +449,8 @@ int main(int argc, char **argv)
 		req.tv_nsec = (sleeptime - req.tv_sec) * 1e9;
 
 		err = nanosleep(&req, &rem);
-		if (err == -1 && errno == EINTR) {
-			nrm_log_error("interupted during sleep, exiting\n");
-			break;
-		}
+		if (err == -1 && errno == EINTR)
+			continue;
 
 		// Read EventSet measurements into "event_values"...
 		assert(PAPI_read(EventSet, event_values) == PAPI_OK);
@@ -470,35 +471,18 @@ int main(int argc, char **argv)
 
 			scope = nrm_scopes[i];
 
-			err = nrm_client_send_event(client, current_time,
-			                            sensor, scope,
-			                            event_totals[i]);
-		}
-		if (err == -1 || errno == EINTR) {
-			nrm_log_error("Interrupted. Exiting\n");
-			break;
+			if (nrm_client_send_event(client, current_time,
+			                          sensor, scope,
+			                          event_totals[i])) {
+			    stop = 1;
+			    break;
+			}
 		}
 
 		last_time = current_time;
 	}
 
-	int papi_status;
-	assert(PAPI_state(EventSet, &papi_status) == PAPI_OK);
-	if (papi_status == PAPI_RUNNING) {
-		assert(PAPI_stop(EventSet, event_values) == PAPI_OK);
-
-		nrm_time_gettime(&current_time);
-
-		/* final send here */
-		for (i = 0; i < n_energy_events; i++) {
-			event_totals[i] = event_values[i] / 1e6;
-
-			scope = nrm_scopes[i];
-
-			nrm_client_send_event(client, current_time, sensor,
-			                      scope, event_totals[i]);
-		}
-	}
+	nrm_log_error("Interrupt caught; exiting\n");
 
 	for (i = 0; i < n_scopes; i++)
 		if (nrm_scopes_free[i]) {
