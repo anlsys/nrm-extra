@@ -471,11 +471,10 @@ int main(int argc, char **argv)
 
 			scope = nrm_scopes[i];
 
-			if (nrm_client_send_event(client, current_time,
-			                          sensor, scope,
-			                          event_totals[i])) {
-			    stop = 1;
-			    break;
+			if (nrm_client_send_event(client, current_time, sensor,
+			                          scope, event_totals[i])) {
+				stop = 1;
+				break;
 			}
 		}
 
