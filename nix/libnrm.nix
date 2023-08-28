@@ -35,4 +35,5 @@ stdenv.mkDerivation {
     protobufc
     zeromq
   ];
+  propagatedBuildInputs = [ zeromq ];
 }
