@@ -1,4 +1,4 @@
-{ pkgs ? import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/22.11.tar.gz") {},
+{ pkgs ? import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/23.05.tar.gz") {},
 }:
 pkgs // rec {
   stdenv = pkgs.stdenvAdapters.keepDebugInfo pkgs.llvmPackages_12.stdenv;
