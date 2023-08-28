@@ -1,4 +1,4 @@
-{ stdenv, autoreconfHook, pkgconfig, libnrm, papi, jansson, variorum, hwloc, git, geopmd }:
+{ stdenv, autoreconfHook, pkgconfig, libnrm, openmp, papi, jansson, variorum, hwloc, git, geopmd }:
 stdenv.mkDerivation {
   src = ../.;
   name = "nrm-extra";
