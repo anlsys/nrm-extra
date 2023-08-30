@@ -1,6 +1,3 @@
-# MPI needs to stay by itself, otherwise we end up compiling everything with it
-SUBDIRS = mpi
-
 COMMON_CFLAGS = @LIBNRM_CFLAGS@ -I$(top_srcdir)/src/common
 COMMON_LDFLAGS = @LIBNRM_LIBS@
 
@@ -12,27 +9,12 @@ noinst_LTLIBRARIES = libcommon.la
 noinst_HEADERS = common/extra.h
 libcommon_la_SOURCES = common/extra.c
 
-nrm_perfwrapper_SOURCES = perfwrapper/perfwrapper.c
-nrm_perfwrapper_LDADD = libcommon.la
-nrm_perfwrapper_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@
-nrm_perfwrapper_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@
-
 nrm_power_papi_SOURCES = power_papi/nrmpower_papi.c
 nrm_power_papi_LDADD = libcommon.la
 nrm_power_papi_CFLAGS = $(COMMON_CFLAGS) @PAPI_CFLAGS@ @HWLOC_CFLAGS@
 nrm_power_papi_LDFLAGS = $(COMMON_LDFLAGS) @PAPI_LIBS@ @HWLOC_LIBS@
 
-lib_LTLIBRARIES = libnrm-ompt.la
-
-libnrm_ompt_la_SOURCES = omp/entrypoint.c \
-			 omp/nrm_omp_callbacks.c \
-			 omp/nrm_omp.h
-
-libnrm_ompt_la_LIBADD = libcommon.la
-libnrm_ompt_la_CFLAGS = $(COMMON_CFLAGS) $(OPENMP_CFLAGS) @LIBNRM_CFLAGS@
-libnrm_ompt_la_LDFLAGS = $(COMMON_LDFLAGS) $(OPENMP_CFLAGS) @LIBNRM_LIBS@
-
-bin_PROGRAMS = nrm-perfwrapper nrm-power-papi
+bin_PROGRAMS = nrm-power-papi
 
 if HAVE_VARIORUM
 nrm_power_variorum_SOURCES = power_variorum/nrmpower_variorum.c
@@ -40,12 +22,4 @@ nrm_power_variorum_LDADD = libcommon.la
 nrm_power_variorum_CFLAGS = $(COMMON_CFLAGS) @VARIORUM_CFLAGS@ @HWLOC_CFLAGS@ @JANSSON_CFLAGS@
 nrm_power_variorum_LDFLAGS = $(COMMON_LDFLAGS) @VARIORUM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
 bin_PROGRAMS += nrm-power-variorum
-endif
-
-if HAVE_GEOPM
-nrm_power_geopm_SOURCES = power_geopm/nrmpower_geopm.c
-nrm_power_geopm_LDADD = libcommon.la
-nrm_power_geopm_CFLAGS = $(COMMON_CFLAGS) @GEOPM_CFLAGS@ @HWLOC_CFLAGS@ @JANSSON_CFLAGS@
-nrm_power_geopm_LDFLAGS = $(COMMON_LDFLAGS) @GEOPM_LIBS@ @HWLOC_LIBS@ @JANSSON_LIBS@
-bin_PROGRAMS += nrm-power-geopm
 endif
